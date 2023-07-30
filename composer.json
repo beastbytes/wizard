@@ -1,0 +1,58 @@
+{
+    "name": "beastbytes/wizard",
+    "type": "library",
+    "description": "Multi-part form handler",
+    "keywords": [
+        "form",
+        "multi-part",
+        "steps",
+        "plot branching",
+        "wizard"
+    ],
+    "support": {
+        "issues": "https://github.com/beastbytes/phone-number-validator/issues",
+        "source": "https://github.com/beastbytes/phone-number-validator"
+    },
+    "license": "BSD-3-Clause",
+    "authors": [
+        {
+            "name": "Chris Yates",
+            "email": "chris.l.yates@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "require": {
+        "php": "^8.0",
+        "httpsoft/http-message": "^1.0",
+        "yiisoft/data-response": "^2.0",
+        "yiisoft/router-fastroute": "^3.0",
+        "yiisoft/session": "^2.0",
+        "yiisoft/yii-http": "^1.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "10.0",
+        "roave/infection-static-analysis-plugin": "^1.0",
+        "roave/security-advisories": "dev-latest",
+        "vimeo/psalm": "^5.0",
+        "yiisoft/event-dispatcher": "^1.0",
+        "yiisoft/test-support": "^3.0",
+        "yiisoft/yii-view": "^6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "BeastBytes\\Wizard\\": "src"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "BeastBytes\\Wizard\\Tests\\": "tests"
+        }
+    },
+    "scripts": {
+        "infection": "roave-infection-static-analysis-plugin --log-verbosity=all --debug",
+        "psalm": "psalm",
+        "robo": "robo",
+        "test": "phpunit --testdox"
+    }
+}
