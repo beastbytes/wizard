@@ -51,10 +51,16 @@ class WizardTest extends TestCase
 
     private array $events;
     private ResponseFactory $responseFactory;
-    private Session $session;
+    private static Session $session;
     private array $testData;
     private UrlGeneratorInterface $urlGenerator;
     private Wizard $wizard;
+
+    public static function setUpBeforeClass(): void
+    {
+        self::$session = new Session();;
+    }
+
 
     protected function setUp(): void
     {
@@ -74,14 +80,21 @@ class WizardTest extends TestCase
 
         $this->responseFactory = new ResponseFactory();
         $this->urlGenerator = $this->createUrlGenerator();
-        $this->session = new Session();
 
         $this->wizard = new Wizard(
             new Dispatcher($provider),
             $this->responseFactory,
-            $this->session,
+            self::$session,
             $this->urlGenerator
         );
+    }
+
+    protected function tearDown(): void
+    {
+        $this
+            ->wizard
+            ->reset()
+        ;
     }
 
     #[DataProvider('sessionKeyProvider')]
@@ -135,7 +148,6 @@ class WizardTest extends TestCase
 
     public function test_not_started()
     {
-
         $steps = ['name', 'address', 'phone'];
 
         $this->expectException(InvalidArgumentException::class);
@@ -163,7 +175,7 @@ class WizardTest extends TestCase
         $this->assertSame(1, $this->events[BeforeWizard::class]);
         $this->assertSame(
             array_combine($steps, $steps),
-            $this->session->get(Wizard::DEFAULT_SESSION_KEY . '.' . Wizard::STEPS_KEY)
+            self::$session->get(Wizard::DEFAULT_SESSION_KEY . '.' . Wizard::STEPS_KEY)
         );
         $this->assertSame(Status::FOUND, $result->getStatusCode());
         $this->assertTrue($result->hasHeader(Header::LOCATION));
