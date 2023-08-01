@@ -16,15 +16,15 @@ final class Step
     use StepTrait;
     use WizardTrait;
 
-    private int|string $nextStep = Wizard::DIRECTION_FORWARD;
+    private int|string $goto = Wizard::DIRECTION_FORWARD;
 
     public function __construct(private Wizard $wizard, private ServerRequestInterface $request)
     {
     }
 
-    public function getNextStep(): int|string
+    public function getGoto(): int|string
     {
-        return $this->nextStep;
+        return $this->goto;
     }
 
     public function getRequest(): ServerRequestInterface
@@ -32,8 +32,8 @@ final class Step
         return $this->request;
     }
 
-    public function setNextStep(int|string $nextStep): void
+    public function setGoto(int|string $goto): void
     {
-        $this->nextStep = $nextStep;
+        $this->ngoto = $goto;
     }
 }

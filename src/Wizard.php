@@ -173,6 +173,13 @@ final class Wizard
                 ;
             }
 
+            if ($this->timeout) {
+                $this
+                    ->session
+                    ->set($this->timeoutKey, time() + $this->timeout)
+                ;
+            }
+
             return $this->createResponse($this->stepRoute, [$this->stepParameter => $step]);
         }
 
@@ -281,12 +288,10 @@ final class Wizard
     /**
      * Reads data stored for a step.
      *
-     * @param string The name of the step. If empty the data for all steps are
-     * returned.
-     * @return mixed Data for the specified step; array: data for all steps;
-     * null is no data exist for the specified step.
+     * @param string $step The name of the step. If empty the data for all steps are returned.
+     * @return array Data for the specified step or data for all steps
      */
-    public function getData($step = self::EMPTY_STEP): array
+    public function getData(string $step = self::EMPTY_STEP): array
     {
         $data = $this
             ->session
@@ -297,11 +302,7 @@ final class Wizard
             return $data;
         }
 
-        if (isset($data[$step])) {
-            return $data[$step];
-        }
-
-        return [];
+        return $data[$step] ?? [];
     }
 
     private function hasCompleted(): bool
@@ -358,6 +359,10 @@ final class Wizard
      */
     private function getExpectedStep(): string
     {
+        $data = $this
+            ->session
+            ->get($this->dataKey);
+
         $steps = array_keys($this
             ->session
             ->get($this->dataKey)
@@ -417,12 +422,12 @@ final class Wizard
                 ->set($this->indexKey, 0)
             ;
         } else {
-            $nextStep = $event->getNextStep();
-            if (is_string($nextStep)) {
+            $goto = $event->getGoto();
+            if (is_string($goto)) {
                 if ($this->autoAdvance) {
-                    throw new RuntimeException();
+                    throw new RuntimeException(self::SOMETHING_EXCEPTION);
                 }
-                $nextStep = $event->getNextStep();
+
                 $this
                     ->session
                     ->set(
@@ -430,11 +435,11 @@ final class Wizard
                         count(
                             $this
                                 ->session
-                                ->get($this->dataKey)[$nextStep]
+                                ->get($this->dataKey)[$goto]
                         )
                     )
                 ;
-            } elseif ($nextStep === self::DIRECTION_REPEAT) {
+            } elseif ($goto === self::DIRECTION_REPEAT) {
                 $this
                     ->session
                     ->set(
@@ -444,7 +449,7 @@ final class Wizard
                             ->get($this->indexKey) + 1
                     )
                 ;
-            } elseif ($nextStep === self::DIRECTION_BACKWARD) {
+            } elseif ($goto === self::DIRECTION_BACKWARD) {
                 if (
                     $this
                         ->session
@@ -498,7 +503,7 @@ final class Wizard
                         ->session
                         ->get($this->stepsKey)
                 )
-                    ? null // wizard has finished
+                    ? self::EMPTY_STEP // wizard has finished
                     : $steps[$index]
                 );
                 $data = $this->session->get($this->dataKey);
@@ -506,19 +511,12 @@ final class Wizard
                     ->session
                     ->set(
                         $this->indexKey,
-                        $nextStep !== null && array_key_exists($nextStep, $data)
+                        $nextStep !== self::EMPTY_STEP && array_key_exists($nextStep, $data)
                             ? count($data[$nextStep])
                             : 0
                     )
                 ;
             }
-        }
-
-        if ($this->timeout) {
-            $this
-                ->session
-                ->set($this->timeoutKey, time() + $this->timeout)
-            ;
         }
 
         return $nextStep;
