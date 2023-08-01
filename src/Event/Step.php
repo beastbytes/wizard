@@ -34,6 +34,6 @@ final class Step
 
     public function setGoto(int|string $goto): void
     {
-        $this->ngoto = $goto;
+        $this->goto = $goto;
     }
 }
