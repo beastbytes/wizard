@@ -44,8 +44,15 @@ class WizardTest extends TestCase
     private const COMPLETED_ROUTE_PATTERN = '/completed';
     private const EXPIRED_ROUTE = 'expiredRoute';
     private const EXPIRED_ROUTE_PATTERN = '/expired/{' . self::STEP_PARAMETER . ':\w*}';
+    private const REPETITIONS = [
+        'repetition_1',
+        'repetition_2',
+        'repetition_3',
+        'repetition_4',
+    ];
     private const STEP_BACK = 'step_back';
     private const STEP_BRANCH = 'step_branch';
+    private const STEP_REPEAT = 'step_repeat';
     private const STEP_ROUTE = 'stepRoute';
     private const STEP_PARAMETER = 'step';
     private const STEP_ROUTE_PATTERN = '/wizard/{' . self::STEP_PARAMETER . ':\w*}';
@@ -53,6 +60,7 @@ class WizardTest extends TestCase
 
     private array $branches;
     private array $events;
+    private int $index;
     private ResponseFactory $responseFactory;
     private static Session $session;
     private array $testData;
@@ -72,6 +80,8 @@ class WizardTest extends TestCase
             Step::class => 0,
             StepExpired::class => 0,
         ];
+
+        $this->index = 0;
 
         $provider = new Provider((new ListenerCollection())
             ->add([$this, 'afterWizard'], AfterWizard::class)
@@ -150,7 +160,7 @@ class WizardTest extends TestCase
 
     public function test_not_started()
     {
-        $steps = ['name', 'address', 'phone'];
+        $steps = ['step_1', 'step_2', 'step_3'];
 
         $this->expectException(InvalidArgumentException::class);
         $this->expectExceptionMessage(strtr(Wizard::INVALID_STEP_EXCEPTION, ['{step}' => $steps[0]]));
@@ -165,7 +175,7 @@ class WizardTest extends TestCase
 
     public function test_start_wizard()
     {
-        $steps = ['name', 'address', 'phone'];
+        $steps = ['step_1', 'step_2', 'step_3'];
         $result = $this
             ->wizard
             ->withCompletedRoute(self::COMPLETED_ROUTE)
@@ -176,17 +186,17 @@ class WizardTest extends TestCase
 
         $this->assertSame(1, $this->events[BeforeWizard::class]);
         $this->assertSame(
-            array_combine($steps, $steps),
+            $steps,
             self::$session->get(Wizard::SESSION_KEY . '.' . Wizard::STEPS_KEY)
         );
         $this->assertSame(Status::FOUND, $result->getStatusCode());
         $this->assertTrue($result->hasHeader(Header::LOCATION));
-        $this->assertSame(['/wizard/name'], $result->getHeader(Header::LOCATION));
+        $this->assertSame(['/wizard/' . $steps[0]], $result->getHeader(Header::LOCATION));
     }
 
     public function test_steps()
     {
-        $steps = ['name', 'address', 'phone'];
+        $steps = ['step_1', 'step_2', 'step_3'];
         $expectedData = [];
         foreach ($steps as $step) {
             $expectedData[$step] = ['key' => $step . '-value'];
@@ -239,7 +249,7 @@ class WizardTest extends TestCase
 
     public function test_previous_step()
     {
-        $steps = ['step_0', self::STEP_BACK, 'step_2'];
+        $steps = ['step_1', self::STEP_BACK, 'step_3'];
         $this->wizard = $this
             ->wizard
             ->withCompletedRoute(self::COMPLETED_ROUTE)
@@ -274,7 +284,7 @@ class WizardTest extends TestCase
 
     public function test_no_previous_step_if_forward_only()
     {
-        $steps = ['step_0', self::STEP_BACK, 'step_2'];
+        $steps = ['step_1', self::STEP_BACK, 'step_3'];
         $this->wizard = $this
             ->wizard
             ->withCompletedRoute(self::COMPLETED_ROUTE)
@@ -347,10 +357,69 @@ class WizardTest extends TestCase
         $this->assertSame($expectedData, $this->wizard->getData());
     }
 
+    public function test_repeated_steps()
+    {
+        $steps = ['step_1', self::STEP_REPEAT, 'step_3'];
+        $expectedData = [
+            'step_1' => ['key' => 'step_1-value'],
+            self::STEP_REPEAT => [
+                ['key-0' => 'step_repeat-value-0'],
+                ['key-1' => 'step_repeat-value-1'],
+                ['key-2' => 'step_repeat-value-2'],
+                ['key-3' => 'step_repeat-value-3'],
+            ],
+            'step_3' => ['key' => 'step_3-value'],
+        ];
+
+        $this->wizard = $this
+            ->wizard
+            ->withCompletedRoute(self::COMPLETED_ROUTE)
+            ->withStepRoute(self::STEP_ROUTE)
+            ->withSteps($steps)
+        ;
+
+        $this
+            ->wizard
+            ->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET))
+        ;
+
+        $this
+            ->wizard
+            ->step($steps[0], new ServerRequest(method: Method::GET))
+        ;
+        $this
+            ->wizard
+            ->step($steps[0], new ServerRequest(method: Method::POST))
+        ;
+
+        do {
+            $this
+                ->wizard
+                ->step($steps[1], new ServerRequest(method: Method::GET))
+            ;
+            $result = $this
+                ->wizard
+                ->step($steps[1], new ServerRequest(method: Method::POST))
+            ;
+        } while (
+            $result->getHeader(Header::LOCATION) === ['/wizard/' . $steps[1]]
+        );
+
+        $this
+            ->wizard
+            ->step($steps[2], new ServerRequest(method: Method::GET))
+        ;
+        $this
+            ->wizard
+            ->step($steps[2], new ServerRequest(method: Method::POST))
+        ;
+
+        $this->assertSame($expectedData, $this->wizard->getData());
+    }
+
     public static function branchProvider(): Generator
     {
         foreach ([
-            //*
             'grouped branches / branch1 / no default' => [
                 'steps' => [
                     'step1',
@@ -368,8 +437,6 @@ class WizardTest extends TestCase
                 ],
                 'path' => ['step1', 'step2', self::STEP_BRANCH, 'step3', 'step4'],
             ],
-            //*/
-            //*
             'grouped branches / branch1 / default' => [
                 'steps' => [
                     'step1',
@@ -385,8 +452,6 @@ class WizardTest extends TestCase
                 ],
                 'path' => ['step1', 'step2', self::STEP_BRANCH, 'step3', 'step4'],
             ],
-            //*/
-            //*
             'grouped branches / branch2 / no default' => [
                 'steps' => [
                     'step1',
@@ -404,8 +469,6 @@ class WizardTest extends TestCase
                 ],
                 'path' => ['step1', 'step2', self::STEP_BRANCH, 'step4', 'step5'],
             ],
-            //*/
-            //*
             'grouped branches / branch2 / default' => [
                 'steps' => [
                     'step1',
@@ -422,8 +485,6 @@ class WizardTest extends TestCase
                 ],
                 'path' => ['step1', 'step2', self::STEP_BRANCH, 'step4', 'step5'],
             ],
-            //*/
-            //*
            'separate branches / branch1 / no default' => [
                 'steps' => [
                     'step1',
@@ -444,8 +505,6 @@ class WizardTest extends TestCase
                 ],
                 'path' => ['step1', 'step2', self::STEP_BRANCH, 'step3', 'step4'],
             ],
-            //*/
-           //*
            'separate branches / branch2 / no default' => [
                'steps' => [
                    'step1',
@@ -466,8 +525,6 @@ class WizardTest extends TestCase
                ],
                'path' => ['step1', 'step2', self::STEP_BRANCH, 'step4', 'step5'],
            ],
-           //*/
-           //*
            'separate branches / branch1 & branch2 / no default' => [
                'steps' => [
                    'step1',
@@ -486,7 +543,6 @@ class WizardTest extends TestCase
                ],
                'path' => ['step1', 'step2', self::STEP_BRANCH, 'step3', 'step4', 'step5'],
            ],
-           //*/
         ] as $name => $branch) {
             yield $name => $branch;
         }
@@ -542,14 +598,26 @@ class WizardTest extends TestCase
         $this->events[Step::class]++;
 
         if ($event->getRequest()->getMethod() === Method::POST) {
-            if ($event->getWizard()->getCurrentStep() === self::STEP_BACK) {
-                $event->setGoto(Wizard::DIRECTION_BACKWARD);
-            } else {
-                if ($event->getWizard()->getCurrentStep() === self::STEP_BRANCH) {
+            switch ($event->getWizard()->getCurrentStep()) {
+                case self::STEP_BACK:
+                    $event->setData(['key' => $event->getWizard()->getCurrentStep() . '-value']);
+                    $event->setGoto(Wizard::DIRECTION_BACKWARD);
+                    break;
+                case self::STEP_BRANCH:
+                    $event->setData(['key' => $event->getWizard()->getCurrentStep() . '-value']);
                     $event->setBranches($this->branches);
-                }
+                    break;
+                case self::STEP_REPEAT:
+                    $event->setData(['key-' . $this->index => $event->getWizard()->getCurrentStep() . '-value-' . $this->index]);
+                    $this->index++;
 
-                $event->setData(['key' => $event->getWizard()->getCurrentStep() . '-value']);
+                    if ($this->index < count(self::REPETITIONS)) {
+                        $event->setGoto(Wizard::DIRECTION_REPEAT);
+                    }
+                    break;
+                default:
+                    $event->setData(['key' => $event->getWizard()->getCurrentStep() . '-value']);
+                    break;
             }
         }
     }

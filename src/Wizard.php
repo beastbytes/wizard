@@ -37,6 +37,7 @@ final class Wizard
     public const BRANCH_ENABLED = 1;
     public const DIRECTION_BACKWARD = -1;
     public const DIRECTION_FORWARD = 1;
+    public const DIRECTION_REPEAT = 0;
     public const DEFAULT_BRANCH = true;
     public const EMPTY_STEP = '';
     public const FORWARD_ONLY = true;
@@ -53,7 +54,6 @@ final class Wizard
     public const SESSION_KEY = 'Wizard';
     public const STEPS_KEY = 'steps';
     public const STEP_TIMEOUT_KEY = 'stepTimeout';
-    private const NO_REPETITIONS = 0;
     private const NO_STEP_TIMEOUT = 0;
     public const STEP_PARAMETER = 'step';
 
@@ -87,7 +87,7 @@ final class Wizard
      * @var bool If TRUE previously completed steps can not be reprocessed.
      */
     private bool $forwardOnly = !self::FORWARD_ONLY;
-    private int $repetitions = self::NO_REPETITIONS;
+    private int $repetitionIndex = 0;
     private string $stepRoute = '';
     private string $stepParameter = self::STEP_PARAMETER;
     private array $steps = [];
@@ -97,7 +97,6 @@ final class Wizard
     private int $stepTimeout = self::NO_STEP_TIMEOUT;
     private string $branchKey = '';
     private string $dataKey = '';
-    private string $repetitionIndexKey = '';
     private string $stepsKey = '';
     private string $stepTimeoutKey = '';
 
@@ -268,7 +267,6 @@ final class Wizard
         foreach ([
             $this->branchKey,
             $this->dataKey,
-            $this->repetitionIndexKey,
             $this->stepsKey,
             $this->stepTimeoutKey,
         ] as $key) {
@@ -309,19 +307,6 @@ final class Wizard
         return $data[$step] ?? [];
     }
 
-    public function getRepitions(): int
-    {
-        return $this->repetitions;
-    }
-
-    public function getRepitionIndex(): int
-    {
-        return $this
-            ->session
-            ->get($this->repetitionIndexKey, 0)
-        ;
-    }
-
     /**
      * Select, skip, or deselect branch(es)
      *
@@ -338,13 +323,6 @@ final class Wizard
 
         foreach ($directives as $name => $directive) {
             ArrayHelper::setValue($branches, $name, $directive);
-            /*
-            if ($directive === self::BRANCH_DISABLED) {
-                ArrayHelper::remove($branches, $name);
-            } else {
-                ArrayHelper::setValue($branches, $name, $directive);
-            }
-            */
         }
 
         $this
@@ -419,11 +397,7 @@ final class Wizard
                 $nextStep = $steps[0];
             }
 
-            $this
-                ->session
-                ->set($this->repetitionIndexKey, 0)
-            ;
-
+            $this->repetitionIndex = 0;
             return $nextStep;
         }
 
@@ -434,17 +408,12 @@ final class Wizard
                 throw new RuntimeException(self::SOMETHING_EXCEPTION);
             }
 
-            $this
-                ->session
-                ->set(
-                    $this->repetitionIndexKey,
-                    count(
-                        ArrayHelper::getValue(
-                            $this
-                                ->session
-                                ->get($this->dataKey),
-                            $goto
-                        )
+            $this->repetitionIndex = count(
+                    ArrayHelper::getValue(
+                        $this
+                            ->session
+                            ->get($this->dataKey),
+                        $goto
                     )
                 )
             ;
@@ -453,77 +422,39 @@ final class Wizard
         }
 
         if ($goto === self::DIRECTION_BACKWARD && !$this->forwardOnly) {
-            if (
-                $this
+            if ($this->repetitionIndex === 0) { // go to the previous step
+                $steps = $this
                     ->session
-                    ->get($this->repetitionIndexKey) === 0
-            ) { // go to the previous step
-                $steps = array_keys(
-                    $this
-                        ->session
-                        ->get($this->stepsKey)
-                );
+                    ->get($this->stepsKey)
+                ;
                 $index = array_search($this->getCurrentStep(), $steps, true);
 
                 $nextStep = $steps[($index === 0 ? 0 : $index - 1)];
 
-                // @todo not sure what this is doing here
-                /*
-                $this
-                    ->session
-                    ->set(
-                        $this->repetitionIndexKey,
-                        count(
-                            ArrayHelper::getValue(
-                                $this
-                                    ->session
-                                    ->get($this->dataKey),
-                                $nextStep
-                            )
-                        ) - 1
-                    )
-                ;
-                //*/
-            } else { // go to the previous step in a set of repeated steps
-                $nextStep = $this->getCurrentStep();
-                $this
-                    ->session
-                    ->set(
-                        $this->repetitionIndexKey,
+                $this->repetitionIndex = count(
+                    ArrayHelper::getValue(
                         $this
                             ->session
-                            ->get($this->repetitionIndexKey) - 1
+                            ->get($this->dataKey),
+                        $nextStep
                     )
-                ;
+                ) - 1;
+            } else { // go to the previous step in a set of repeated steps
+                $nextStep = $this->getCurrentStep();
+                $this->repetitionIndex--;
             }
 
             return $nextStep;
         }
 
-        if ($this->repetitions > 0) {
-            $repetitionIndex = $this
-                ->session
-                ->get($this->repetitionIndexKey)
-            ;
-            if ($repetitionIndex < $this->repetitions) { // repeat step
-                $nextStep = $this->getCurrentStep();
-                $this
-                    ->session
-                    ->set($this->repetitionIndexKey, $repetitionIndex + 1)
-                ;
-            } else {
-                $nextStep = '?????'; // @todo What is the next step
-            }
-
-            return $nextStep;
+        if ($goto === self::DIRECTION_REPEAT) {
+            $this->repetitionIndex++;
+            return $this->getCurrentStep();
         }
 
         if ($this->autoAdvance) {
             $nextStep = $this->getExpectedStep();
-            $this
-                ->session
-                ->set($this->repetitionIndexKey, 0)
-            ;
+            $this->repetitionIndex = 0;
         } else {
             $steps = array_keys(
                 $this
@@ -540,14 +471,9 @@ final class Wizard
                 : $steps[$index]
             );
             $data = $this->session->get($this->dataKey);
-            $this
-                ->session
-                ->set(
-                    $this->repetitionIndexKey,
-                    $nextStep !== self::EMPTY_STEP && array_key_exists($nextStep, $data)
-                        ? count($data[$nextStep])
-                        : 0
-                )
+            $this->repetitionIndex = $nextStep !== self::EMPTY_STEP && array_key_exists($nextStep, $data)
+                ? count($data[$nextStep])
+                : 0
             ;
         }
 
@@ -728,55 +654,32 @@ final class Wizard
         return $parsed;
     }
 
-    /*
-    private function parseSteps(array $steps): array
+    private function saveStepData(string $step, array $stepData): void
     {
-        $parsed = [];
+        $data = $this
+            ->session
+            ->get($this->dataKey)
+        ;
 
-        foreach ($steps as $step) {
-            if (is_array($step)) {
-                foreach ($step as $branchName => $branchSteps) {
-                    $branchDirective = ArrayHelper::getValue(
-                        $this
-                            ->session
-                            ->get($this->branchKey),
-                        $branchName,
-                        false
-                    );
-
-                    if ($branchDirective !== false) {
-                        if ($branchDirective === self::BRANCH_ENABLED) {
-                            $branch = $branchName;
-                        }
-                    } elseif (empty($branch) && $this->defaultBranch) {
-                        $branch = $branchName;
-                    }
-                }
-
-                if (!empty($branch)) {
-                    if (is_array($step[$branch])) {
-                        foreach ($this->parseSteps($step[$branch]) as $s) {
-                            $parsed[] = $s;
-                        }
-                    } else {
-                        $parsed[] = $step[$branch];
-                    }
-                }
+        if ($this->repetitionIndex === 0) {
+            if (isset($data[$step][0])) {
+                $data[$step][0] = $stepData;
             } else {
-                $parsed[] = $step;
+                $data[$step] = $stepData;
             }
+        } elseif ($this->repetitionIndex === 1) {
+            if (!isset($data[$step][0])) {
+                $temp = $data[$step];
+                unset($data[$step]);
+                $data[$step][0] = $temp;
+            }
+
+            $data[$step][1] = $stepData;
+        } else {
+            $data[$step][$this->repetitionIndex] = $stepData;
         }
 
-        return $parsed;
-    }
-    */
-
-    private function saveStepData(string $step, array $data): void
-    {
-        $currentData = $this->session->get($this->dataKey);
-        $currentData[$step] = $data;
-
-        $this->session->set($this->dataKey, $currentData);
+        $this->session->set($this->dataKey, $data);
     }
 
     private function createResponse(string $route, array $parameters = []): ResponseInterface
