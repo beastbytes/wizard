@@ -44,11 +44,14 @@ class WizardTest extends TestCase
     private const COMPLETED_ROUTE_PATTERN = '/completed';
     private const EXPIRED_ROUTE = 'expiredRoute';
     private const EXPIRED_ROUTE_PATTERN = '/expired/{' . self::STEP_PARAMETER . ':\w*}';
+    private const STEP_BACK = 'step_back';
+    private const STEP_BRANCH = 'step_branch';
     private const STEP_ROUTE = 'stepRoute';
     private const STEP_PARAMETER = 'step';
     private const STEP_ROUTE_PATTERN = '/wizard/{' . self::STEP_PARAMETER . ':\w*}';
     private const TEST_DATA_KEY = 'testData';
 
+    private array $branches;
     private array $events;
     private ResponseFactory $responseFactory;
     private static Session $session;
@@ -58,9 +61,8 @@ class WizardTest extends TestCase
 
     public static function setUpBeforeClass(): void
     {
-        self::$session = new Session();;
+        self::$session = new Session();
     }
-
 
     protected function setUp(): void
     {
@@ -101,7 +103,7 @@ class WizardTest extends TestCase
     public function test_session_key(string $sessionKey)
     {
         if ($sessionKey === '') {
-            $sessionKey = Wizard::DEFAULT_SESSION_KEY;
+            $sessionKey = Wizard::SESSION_KEY;
         } else {
             $this->wizard = $this->wizard->withSessionKey($sessionKey);
         }
@@ -175,7 +177,7 @@ class WizardTest extends TestCase
         $this->assertSame(1, $this->events[BeforeWizard::class]);
         $this->assertSame(
             array_combine($steps, $steps),
-            self::$session->get(Wizard::DEFAULT_SESSION_KEY . '.' . Wizard::STEPS_KEY)
+            self::$session->get(Wizard::SESSION_KEY . '.' . Wizard::STEPS_KEY)
         );
         $this->assertSame(Status::FOUND, $result->getStatusCode());
         $this->assertTrue($result->hasHeader(Header::LOCATION));
@@ -185,7 +187,12 @@ class WizardTest extends TestCase
     public function test_steps()
     {
         $steps = ['name', 'address', 'phone'];
-        $this->wizard = $this // starts the wizard
+        $expectedData = [];
+        foreach ($steps as $step) {
+            $expectedData[$step] = ['key' => $step . '-value'];
+        }
+
+        $this->wizard = $this
             ->wizard
             ->withCompletedRoute(self::COMPLETED_ROUTE)
             ->withStepRoute(self::STEP_ROUTE)
@@ -227,7 +234,262 @@ class WizardTest extends TestCase
 
         $this->assertSame(1, $this->events[AfterWizard::class]);
 
-        $this->assertSame($steps, array_keys($this->wizard->getData()));
+        $this->assertSame($expectedData, $this->wizard->getData());
+    }
+
+    public function test_previous_step()
+    {
+        $steps = ['step_0', self::STEP_BACK, 'step_2'];
+        $this->wizard = $this
+            ->wizard
+            ->withCompletedRoute(self::COMPLETED_ROUTE)
+            ->withStepRoute(self::STEP_ROUTE)
+            ->withForwardOnly(!Wizard::FORWARD_ONLY)
+            ->withSteps($steps)
+        ;
+
+        $this
+            ->wizard
+            ->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET))
+        ;
+        $this
+            ->wizard
+            ->step($steps[0], new ServerRequest(method: Method::GET))
+        ;
+        $this
+            ->wizard
+            ->step($steps[0], new ServerRequest(method: Method::POST))
+        ;
+        $this
+            ->wizard
+            ->step($steps[1], new ServerRequest(method: Method::GET))
+        ;
+        $result = $this
+            ->wizard
+            ->step($steps[1], new ServerRequest(method: Method::POST))
+        ;
+
+        $this->assertSame(['/wizard/' . $steps[0]], $result->getHeader(Header::LOCATION));
+    }
+
+    public function test_no_previous_step_if_forward_only()
+    {
+        $steps = ['step_0', self::STEP_BACK, 'step_2'];
+        $this->wizard = $this
+            ->wizard
+            ->withCompletedRoute(self::COMPLETED_ROUTE)
+            ->withStepRoute(self::STEP_ROUTE)
+            ->withForwardOnly(Wizard::FORWARD_ONLY)
+            ->withSteps($steps)
+        ;
+
+        $this
+            ->wizard
+            ->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET))
+        ;
+        $this
+            ->wizard
+            ->step($steps[0], new ServerRequest(method: Method::GET))
+        ;
+        $this
+            ->wizard
+            ->step($steps[0], new ServerRequest(method: Method::POST))
+        ;
+        $this
+            ->wizard
+            ->step($steps[1], new ServerRequest(method: Method::GET))
+        ;
+        $result = $this
+            ->wizard
+            ->step($steps[1], new ServerRequest(method: Method::POST))
+        ;
+
+        $this->assertSame(['/wizard/' . $steps[2]], $result->getHeader(Header::LOCATION));
+    }
+
+    #[DataProvider('branchProvider')]
+    public function test_branching(array $steps, bool $defaultBranch, array $branches, array $path)
+    {
+        $expectedData = [];
+        foreach ($path as $step) {
+            $expectedData[$step] = ['key' => $step . '-value'];
+        }
+
+        $this->branches = $branches;
+        $this->wizard = $this
+            ->wizard
+            ->withCompletedRoute(self::COMPLETED_ROUTE)
+            ->withStepRoute(self::STEP_ROUTE)
+            ->withDefaultBranch($defaultBranch)
+            ->withSteps($steps)
+        ;
+
+        $this
+            ->wizard
+            ->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET))
+        ;
+
+        foreach ($path as $i => $step) {
+            $this
+                ->wizard
+                ->step($step, new ServerRequest(method: Method::GET))
+            ;
+            $result = $this
+                ->wizard
+                ->step($step, new ServerRequest(method: Method::POST))
+            ;
+
+            if (($index = $i + 1) < count($path)) {
+                $this->assertSame(['/wizard/' . $path[$index]], $result->getHeader(Header::LOCATION));
+            }
+        }
+
+        $this->assertSame($expectedData, $this->wizard->getData());
+    }
+
+    public static function branchProvider(): Generator
+    {
+        foreach ([
+            //*
+            'grouped branches / branch1 / no default' => [
+                'steps' => [
+                    'step1',
+                    'step2',
+                    self::STEP_BRANCH,
+                    [
+                        'branch1' => ['step3', 'step4'],
+                        'branch2' => ['step4', 'step5']
+                    ]
+                ],
+                'defaultBranch' => !Wizard::DEFAULT_BRANCH,
+                'branches' => [
+                    'branch1' => Wizard::BRANCH_ENABLED,
+                    'branch2' => Wizard::BRANCH_DISABLED,
+                ],
+                'path' => ['step1', 'step2', self::STEP_BRANCH, 'step3', 'step4'],
+            ],
+            //*/
+            //*
+            'grouped branches / branch1 / default' => [
+                'steps' => [
+                    'step1',
+                    'step2',
+                    self::STEP_BRANCH,
+                    [
+                        'branch1' => ['step3', 'step4'],
+                        'branch2' => ['step4', 'step5']
+                    ]
+                ],
+                'defaultBranch' => Wizard::DEFAULT_BRANCH,
+                'branches' => [
+                ],
+                'path' => ['step1', 'step2', self::STEP_BRANCH, 'step3', 'step4'],
+            ],
+            //*/
+            //*
+            'grouped branches / branch2 / no default' => [
+                'steps' => [
+                    'step1',
+                    'step2',
+                    self::STEP_BRANCH,
+                    [
+                        'branch1' => ['step3', 'step4'],
+                        'branch2' => ['step4', 'step5']
+                    ]
+                ],
+                'defaultBranch' => !Wizard::DEFAULT_BRANCH,
+                'branches' => [
+                    'branch1' => Wizard::BRANCH_DISABLED,
+                    'branch2' => Wizard::BRANCH_ENABLED,
+                ],
+                'path' => ['step1', 'step2', self::STEP_BRANCH, 'step4', 'step5'],
+            ],
+            //*/
+            //*
+            'grouped branches / branch2 / default' => [
+                'steps' => [
+                    'step1',
+                    'step2',
+                    self::STEP_BRANCH,
+                    [
+                        'branch1' => ['step3', 'step4'],
+                        'branch2' => ['step4', 'step5']
+                    ]
+                ],
+                'defaultBranch' => Wizard::DEFAULT_BRANCH,
+                'branches' => [
+                    'branch1' => Wizard::BRANCH_DISABLED,
+                ],
+                'path' => ['step1', 'step2', self::STEP_BRANCH, 'step4', 'step5'],
+            ],
+            //*/
+            //*
+           'separate branches / branch1 / no default' => [
+                'steps' => [
+                    'step1',
+                    'step2',
+                    self::STEP_BRANCH,
+                    [
+                        'branch1' => ['step3']
+                    ],
+                    'step4',
+                    [
+                        'branch2' => ['step5']
+                    ]
+                ],
+                'defaultBranch' => !Wizard::DEFAULT_BRANCH,
+                'branches' => [
+                    'branch1' => Wizard::BRANCH_ENABLED,
+                    'branch2' => Wizard::BRANCH_DISABLED,
+                ],
+                'path' => ['step1', 'step2', self::STEP_BRANCH, 'step3', 'step4'],
+            ],
+            //*/
+           //*
+           'separate branches / branch2 / no default' => [
+               'steps' => [
+                   'step1',
+                   'step2',
+                   self::STEP_BRANCH,
+                   [
+                       'branch1' => ['step3']
+                   ],
+                   'step4',
+                   [
+                       'branch2' => ['step5']
+                   ]
+               ],
+               'defaultBranch' => !Wizard::DEFAULT_BRANCH,
+               'branches' => [
+                   'branch1' => Wizard::BRANCH_DISABLED,
+                   'branch2' => Wizard::BRANCH_ENABLED,
+               ],
+               'path' => ['step1', 'step2', self::STEP_BRANCH, 'step4', 'step5'],
+           ],
+           //*/
+           //*
+           'separate branches / branch1 & branch2 / no default' => [
+               'steps' => [
+                   'step1',
+                   'step2',
+                   self::STEP_BRANCH,
+                   [
+                       'branch1' => ['step3']
+                   ],
+                   'step4',
+                   [
+                       'branch2' => ['step5']
+                   ]
+               ],
+               'defaultBranch' => Wizard::DEFAULT_BRANCH,
+               'branches' => [
+               ],
+               'path' => ['step1', 'step2', self::STEP_BRANCH, 'step3', 'step4', 'step5'],
+           ],
+           //*/
+        ] as $name => $branch) {
+            yield $name => $branch;
+        }
     }
 
     public static function sessionKeyProvider(): Generator
@@ -279,12 +541,16 @@ class WizardTest extends TestCase
     {
         $this->events[Step::class]++;
 
-        if (
-            $event->getRequest()->getMethod() === Method::POST
-        ) {
-            $event->setData($this->testData);
-        } else {
-            $this->testData = ['key' => 'value'];
+        if ($event->getRequest()->getMethod() === Method::POST) {
+            if ($event->getWizard()->getCurrentStep() === self::STEP_BACK) {
+                $event->setGoto(Wizard::DIRECTION_BACKWARD);
+            } else {
+                if ($event->getWizard()->getCurrentStep() === self::STEP_BRANCH) {
+                    $event->setBranches($this->branches);
+                }
+
+                $event->setData(['key' => $event->getWizard()->getCurrentStep() . '-value']);
+            }
         }
     }
 

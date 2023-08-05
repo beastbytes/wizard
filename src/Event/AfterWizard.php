@@ -10,6 +10,6 @@ namespace BeastBytes\Wizard\Event;
 
 final class AfterWizard
 {
-    use StepTrait;
+    use StepDataTrait;
     use WizardTrait;
 }

@@ -10,6 +10,6 @@ namespace BeastBytes\Wizard\Event;
 
 final class StepExpired
 {
-    use StepTrait;
+    use StepDataTrait;
     use WizardTrait;
 }

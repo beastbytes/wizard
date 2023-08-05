@@ -8,7 +8,7 @@ declare(strict_types=1);
 
 namespace BeastBytes\Wizard\Event;
 
-trait StepTrait
+trait StepDataTrait
 {
     private array $data = [];
 
