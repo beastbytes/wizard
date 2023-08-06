@@ -13,12 +13,12 @@ use BeastBytes\Wizard\Event\BeforeWizard;
 use BeastBytes\Wizard\Event\Step;
 use BeastBytes\Wizard\Event\StepExpired;
 use BeastBytes\Wizard\Exception\InvalidConfigException;
+use BeastBytes\Wizard\Exception\RuntimeException;
 use InvalidArgumentException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use RuntimeException;
 use Yiisoft\Arrays\ArrayHelper;
 use Yiisoft\Http\Header;
 use Yiisoft\Http\Method;
@@ -28,10 +28,6 @@ use Yiisoft\Session\SessionInterface;
 
 final class Wizard
 {
-    public const  SOMETHING_EXCEPTION = 'Step::nextStep cannot be a string if Wizard::autoAdvance is TRUE';
-
-
-
     public const AUTO_ADVANCE = true;
     public const BRANCH_DISABLED = -1;
     public const BRANCH_ENABLED = 1;
@@ -42,6 +38,7 @@ final class Wizard
     public const EMPTY_STEP = '';
     public const FORWARD_ONLY = true;
     public const INVALID_STEP_EXCEPTION = '"{step}" is not a valid step';
+    public const NEXT_STEP_EXCEPTION = 'Step::nextStep cannot be a string if Wizard::autoAdvance is TRUE';
     public const NOT_STARTED_EXCEPTION = 'wizard has not started';
     public const NOT_STARTED_EXCEPTION_INFO = 'Start wizard using step()';
     public const ROUTE_NOT_SET_EXCEPTION = '"{route}" not set';
@@ -50,7 +47,7 @@ final class Wizard
     public const STEPS_NOT_SET_EXCEPTION_INFO= 'Set "steps" using withSteps() method';
     public const BRANCH_KEY = 'branch';
     public const DATA_KEY = 'data';
-    public const INDEX_KEY = 'index';
+    public const REPETITION_INDEX_KEY = 'repetitionIndex';
     public const SESSION_KEY = 'Wizard';
     public const STEPS_KEY = 'steps';
     public const STEP_TIMEOUT_KEY = 'stepTimeout';
@@ -87,7 +84,6 @@ final class Wizard
      * @var bool If TRUE previously completed steps can not be reprocessed.
      */
     private bool $forwardOnly = !self::FORWARD_ONLY;
-    private int $repetitionIndex = 0;
     private string $stepRoute = '';
     private string $stepParameter = self::STEP_PARAMETER;
     private array $steps = [];
@@ -97,6 +93,7 @@ final class Wizard
     private int $stepTimeout = self::NO_STEP_TIMEOUT;
     private string $branchKey = '';
     private string $dataKey = '';
+    private string $repetitionIndexKey = '';
     private string $stepsKey = '';
     private string $stepTimeoutKey = '';
 
@@ -111,6 +108,7 @@ final class Wizard
 
     /**
      * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     * @throws \BeastBytes\Wizard\Exception\RuntimeException
      */
     public function step(string $step, ServerRequestInterface $request): ResponseInterface
     {
@@ -137,8 +135,15 @@ final class Wizard
             ;
         }
 
+        if (!$this->hasStarted()) {
+            throw new RuntimeException(
+                self::NOT_STARTED_EXCEPTION,
+                self::NOT_STARTED_EXCEPTION_INFO
+            );
+        }
+
         if ($this->isValidStep($step)) {
-            $this->setCurrentStep($step);
+            $this->currentStep = $step;
             $event = new Step($this, $request);
 
             // The event handler will either render a form or handle data submitted from the form
@@ -255,10 +260,10 @@ final class Wizard
         return $new;
     }
 
-    public function withTimeout(int $timeout): self
+    public function withStepTimeout(int $stepTimeout): self
     {
         $new = clone $this;
-        $new->stepTimeout = $timeout;
+        $new->stepTimeout = $stepTimeout;
         return $new;
     }
 
@@ -267,6 +272,7 @@ final class Wizard
         foreach ([
             $this->branchKey,
             $this->dataKey,
+            $this->repetitionIndexKey,
             $this->stepsKey,
             $this->stepTimeoutKey,
         ] as $key) {
@@ -280,11 +286,6 @@ final class Wizard
     public function getCurrentStep(): string
     {
         return $this->currentStep;
-    }
-
-    public function setCurrentStep(string $step): void
-    {
-        $this->currentStep = $step;
     }
 
     /**
@@ -397,23 +398,35 @@ final class Wizard
                 $nextStep = $steps[0];
             }
 
-            $this->repetitionIndex = 0;
+            $this
+                ->session
+                ->set($this->repetitionIndexKey, 0);
+
             return $nextStep;
         }
 
         $goto = $event->getGoto();
+        $repetitionIndex = $this
+            ->session
+            ->get($this->repetitionIndexKey)
+        ;
 
         if (is_string($goto)) {
             if ($this->autoAdvance) {
-                throw new RuntimeException(self::SOMETHING_EXCEPTION);
+                throw new RuntimeException(self::NEXT_STEP_EXCEPTION);
             }
 
-            $this->repetitionIndex = count(
-                    ArrayHelper::getValue(
-                        $this
-                            ->session
-                            ->get($this->dataKey),
-                        $goto
+            $this
+                ->session
+                ->set(
+                    $this->repetitionIndexKey,
+                    count(
+                        ArrayHelper::getValue(
+                            $this
+                                ->session
+                                ->get($this->dataKey),
+                            $goto
+                        )
                     )
                 )
             ;
@@ -422,39 +435,61 @@ final class Wizard
         }
 
         if ($goto === self::DIRECTION_BACKWARD && !$this->forwardOnly) {
-            if ($this->repetitionIndex === 0) { // go to the previous step
+            if ($repetitionIndex === 0) { // go to the previous step
                 $steps = $this
                     ->session
                     ->get($this->stepsKey)
                 ;
                 $index = array_search($this->getCurrentStep(), $steps, true);
-
                 $nextStep = $steps[($index === 0 ? 0 : $index - 1)];
 
-                $this->repetitionIndex = count(
-                    ArrayHelper::getValue(
-                        $this
-                            ->session
-                            ->get($this->dataKey),
-                        $nextStep
+                $this
+                    ->session
+                    ->set(
+                        $this->repetitionIndexKey,
+                        count(
+                            ArrayHelper::getValue(
+                                $this
+                                    ->session
+                                    ->get($this->dataKey),
+                                $nextStep
+                            )
+                        ) - 1
                     )
-                ) - 1;
-            } else { // go to the previous step in a set of repeated steps
-                $nextStep = $this->getCurrentStep();
-                $this->repetitionIndex--;
+                ;
+
+                return $nextStep;
             }
 
-            return $nextStep;
+            // go to the previous step in a set of repeated steps
+            $this
+                ->session
+                ->set(
+                    $this->repetitionIndexKey,
+                    $repetitionIndex - 1
+                )
+            ;
+
+            return $this->getCurrentStep();
         }
 
         if ($goto === self::DIRECTION_REPEAT) {
-            $this->repetitionIndex++;
+            $this
+                ->session
+                ->set(
+                    $this->repetitionIndexKey,
+                    $repetitionIndex + 1
+                )
+            ;
             return $this->getCurrentStep();
         }
 
         if ($this->autoAdvance) {
             $nextStep = $this->getExpectedStep();
-            $this->repetitionIndex = 0;
+            $this
+                ->session
+                ->set($this->repetitionIndexKey, 0)
+            ;
         } else {
             $steps = array_keys(
                 $this
@@ -471,9 +506,14 @@ final class Wizard
                 : $steps[$index]
             );
             $data = $this->session->get($this->dataKey);
-            $this->repetitionIndex = $nextStep !== self::EMPTY_STEP && array_key_exists($nextStep, $data)
-                ? count($data[$nextStep])
-                : 0
+            $this
+                ->session
+                ->set(
+                    $this->repetitionIndexKey,
+                    $nextStep !== self::EMPTY_STEP && array_key_exists($nextStep, $data)
+                        ? count($data[$nextStep])
+                        : 0
+                )
             ;
         }
 
@@ -548,12 +588,10 @@ final class Wizard
                 strtr(self::ROUTE_NOT_SET_EXCEPTION, [
                     '{route}' => 'completedRoute',
                 ]),
-                [
-                    strtr(self::ROUTE_NOT_SET_EXCEPTION_INFO, [
-                        '{route}' => 'completedRoute',
-                        '{method}' => 'withCompletedRoute()',
-                    ])
-                ]
+                strtr(self::ROUTE_NOT_SET_EXCEPTION_INFO, [
+                    '{route}' => 'completedRoute',
+                    '{method}' => 'withCompletedRoute()',
+                ])
             );
         }
 
@@ -562,19 +600,29 @@ final class Wizard
                 strtr(self::ROUTE_NOT_SET_EXCEPTION, [
                     '{route}' => 'stepRoute',
                 ]),
-                [
-                    strtr(self::ROUTE_NOT_SET_EXCEPTION_INFO, [
-                        '{route}' => 'stepRoute',
-                        '{method}' => 'withStepRoute()',
-                    ])
-                ]
+                strtr(self::ROUTE_NOT_SET_EXCEPTION_INFO, [
+                    '{route}' => 'stepRoute',
+                    '{method}' => 'withStepRoute()',
+                ])
+            );
+        }
+
+        if ($this->stepTimeout > 0 && $this->expiredRoute === '') {
+            throw new InvalidConfigException(
+                strtr(self::ROUTE_NOT_SET_EXCEPTION, [
+                    '{route}' => 'expiredRoute',
+                ]),
+                strtr(self::ROUTE_NOT_SET_EXCEPTION_INFO, [
+                    '{route}' => 'expiredRoute',
+                    '{method}' => 'withExpiredRoute()',
+                ])
             );
         }
 
         if ($this->steps === []) {
             throw new InvalidConfigException(
                 self::STEPS_NOT_SET_EXCEPTION,
-                [self::STEPS_NOT_SET_EXCEPTION_INFO]
+                self::STEPS_NOT_SET_EXCEPTION_INFO
             );
         }
 
@@ -590,7 +638,7 @@ final class Wizard
 
         $this->branchKey = $this->sessionKey . '.' . self::BRANCH_KEY;
         $this->dataKey = $this->sessionKey . '.' . self::DATA_KEY;
-        $this->repetitionIndexKey = $this->sessionKey . '.' . self::INDEX_KEY;
+        $this->repetitionIndexKey = $this->sessionKey . '.' . self::REPETITION_INDEX_KEY;
         $this->stepsKey = $this->sessionKey . '.' . self::STEPS_KEY;
         $this->stepTimeoutKey = $this->sessionKey . '.' . self::STEP_TIMEOUT_KEY;
 
@@ -661,13 +709,18 @@ final class Wizard
             ->get($this->dataKey)
         ;
 
-        if ($this->repetitionIndex === 0) {
+        $repetitionIndex = $this
+            ->session
+            ->get($this->repetitionIndexKey)
+        ;
+
+        if ($repetitionIndex === 0) {
             if (isset($data[$step][0])) {
                 $data[$step][0] = $stepData;
             } else {
                 $data[$step] = $stepData;
             }
-        } elseif ($this->repetitionIndex === 1) {
+        } elseif ($repetitionIndex === 1) {
             if (!isset($data[$step][0])) {
                 $temp = $data[$step];
                 unset($data[$step]);
@@ -676,7 +729,7 @@ final class Wizard
 
             $data[$step][1] = $stepData;
         } else {
-            $data[$step][$this->repetitionIndex] = $stepData;
+            $data[$step][$repetitionIndex] = $stepData;
         }
 
         $this->session->set($this->dataKey, $data);
