@@ -654,6 +654,13 @@ final class Wizard
             ->session
             ->set($this->repetitionIndexKey, 0)
         ;
+
+        if ($this->stepTimeout !== self::NO_STEP_TIMEOUT) {
+            $this
+                ->session
+                ->set($this->stepTimeoutKey, $this->stepTimeout)
+            ;
+        }
         $this
             ->session
             ->set($this->stepsKey, $this->parseSteps($this->steps))
@@ -759,13 +766,25 @@ final class Wizard
             $this->dataKey,
             $this->repetitionIndexKey,
             $this->stepsKey,
-            $this->stepTimeoutKey,
         ] as $sessionKey) {
             $this->sessionData[$sessionKey] = $this
                 ->session
                 ->get($sessionKey)
             ;
         }
+
+        if (
+            $this
+                ->session
+                ->has($this->stepTimeoutKey)
+        ) {
+            $this->sessionData[$this->stepTimeoutKey] = $this
+                ->session
+                ->get($this->stepTimeoutKey)
+            ;
+        }
+
+        $this->reset();
 
         return serialize([
             $this->sessionKey,

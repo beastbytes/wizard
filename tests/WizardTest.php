@@ -207,14 +207,14 @@ class WizardTest extends TestCase
         ;
 
         $this // start the wizard
-            ->wizard
+        ->wizard
             ->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET))
         ;
 
         $this->assertSame(1, $this->events[BeforeWizard::class]);
 
         $c = count($steps);
-        for ($i = 0; $i < $c;) {
+        for ($i = 0; $i < $c; $i++) {
             $result = $this
                 ->wizard
                 ->step($steps[$i], new ServerRequest(method: Method::GET))
@@ -230,7 +230,7 @@ class WizardTest extends TestCase
             $this->assertSame(Status::FOUND, $result->getStatusCode());
             $this->assertTrue($result->hasHeader(Header::LOCATION));
 
-            $step = ++$i < count($steps) ? $steps[$i] : Wizard::EMPTY_STEP;
+            $step = $i + 1 < count($steps) ? $steps[$i + 1] : Wizard::EMPTY_STEP;
 
             $this->assertSame(['/wizard/' . $step], $result->getHeader(Header::LOCATION));
         }
@@ -243,6 +243,55 @@ class WizardTest extends TestCase
         $this->assertSame(1, $this->events[AfterWizard::class]);
         $this->assertSame($expectedData, $this->wizard->getData());
         $this->assertSame([self::COMPLETED_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
+    }
+
+    /**
+     * @throws \BeastBytes\Wizard\Exception\RuntimeException
+     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     */
+    public function test_get_data(): void
+    {
+        $steps = ['step_1', 'step_2', 'step_3'];
+        $expectedData = [];
+        foreach ($steps as $step) {
+            $expectedData[$step] = ['key' => $step . '-value'];
+        }
+
+        $this->wizard = $this
+            ->wizard
+            ->withCompletedRoute(self::COMPLETED_ROUTE)
+            ->withStepRoute(self::STEP_ROUTE)
+            ->withSteps($steps)
+        ;
+
+        $this // start the wizard
+            ->wizard
+            ->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET))
+        ;
+
+        $c = count($steps);
+        for ($i = 0; $i < $c; $i++) {
+            $this
+                ->wizard
+                ->step($steps[$i], new ServerRequest(method: Method::GET))
+            ;
+            $this
+                ->wizard
+                ->step($steps[$i], new ServerRequest(method: Method::POST))
+            ;
+        }
+
+        $this // end the wizard
+            ->wizard
+            ->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET))
+        ;
+
+        $this->assertSame($expectedData, $this->wizard->getData());
+
+        $c = count($steps);
+        for ($i = 0; $i < $c; $i++) {
+            $this->assertSame($expectedData[$steps[$i]], $this->wizard->getData($steps[$i]));
+        }
     }
 
     /**
@@ -532,30 +581,34 @@ class WizardTest extends TestCase
             ->wizard
             ->pause();
 
+        self::$session->destroy();
+
         // new $wizard
-        $session = new Session();
+        self::$session = new Session();
         $wizard = new Wizard(
             new Dispatcher($this->createProvider()),
             new ResponseFactory(),
-            $session,
+            self::$session,
             $this->createUrlGenerator()
         );
 
         $wizard->resume($paused);
+        $result = $wizard->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET));
 
-        $wizard->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET));
-
-        $this->assertSame('step_4', $wizard->getCurrentStep());
+        $this->assertSame(['/wizard/' . $steps[$step]], $result->getHeader(Header::LOCATION));
 
         $c = count($steps);
-        for ($step = $pauseStep; $step < $c; $step++) {
+        for (; $step < $c; $step++) {
             $wizard->step($steps[$step], new ServerRequest(method: Method::GET));
-            $result = $wizard->step($steps[$step], new ServerRequest(method: Method::POST));
+            $wizard->step($steps[$step], new ServerRequest(method: Method::POST));
         }
 
+        // end the wizard
+        $result = $wizard->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET));
+
         $this->assertSame(1, $this->events[AfterWizard::class]);
-        $this->assertSame($expectedData, $wizard->getData());
         $this->assertSame([self::COMPLETED_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
+        $this->assertSame($expectedData, $wizard->getData());
     }
 
     public static function branchProvider(): Generator

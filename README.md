@@ -10,8 +10,8 @@ Wizard to handle multi-step forms.
   - repeat one or more steps on a form as many times as needed
 - Plot Branching Navigation (PBN)
   - allows the form to decide which path to take depending on a user's response
-- Step stepTimeout
-  - steps can have a stepTimeout to ensure a user responds within a given time
+- Step Timeout
+  - steps can have a timeout to ensure a user responds within a given time
 - Save/Restore
   - save partially completed forms; restore and continue from that point
 - Event driven
@@ -51,8 +51,7 @@ public function wizard(
 ): ResponseInterface
 {
     $step = $currentRoute->getArgument('step');
-    $method = $request->getMethod();
-    return $this->step($step, $method);
+    return $this->step($step, $request);
 }
 ```
 
