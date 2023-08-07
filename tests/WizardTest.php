@@ -79,15 +79,8 @@ class WizardTest extends TestCase
 
         $this->index = 0;
 
-        $provider = new Provider((new ListenerCollection())
-            ->add([$this, 'afterWizard'], AfterWizard::class)
-            ->add([$this, 'beforeWizard'], BeforeWizard::class)
-            ->add([$this, 'step'], Step::class)
-            ->add([$this, 'stepExpired'], StepExpired::class)
-        );
-
         $this->wizard = new Wizard(
-            new Dispatcher($provider),
+            new Dispatcher($this->createProvider()),
             new ResponseFactory(),
             self::$session,
             $this->createUrlGenerator()
@@ -465,7 +458,7 @@ class WizardTest extends TestCase
      * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
      * @throws \BeastBytes\Wizard\Exception\RuntimeException
      */
-    public function test_timeout_step(): void
+    public function test_step_timeout(): void
     {
         $steps = ['step_1', self::TIMEOUT_STEP, 'step_3'];
 
@@ -501,6 +494,68 @@ class WizardTest extends TestCase
         ;
 
         $this->assertSame(['/expired/' . self::TIMEOUT_STEP], $result->getHeader(Header::LOCATION));
+    }
+
+    public function test_pause_and_resume(): void
+    {
+        $steps = ['step_1', 'step_2', 'step_3', 'step_4', 'step_5'];
+        $pauseStep = 3;
+        $expectedData = [];
+        foreach ($steps as $step) {
+            $expectedData[$step] = ['key' => $step . '-value'];
+        }
+
+        $this->wizard = $this
+            ->wizard
+            ->withCompletedRoute(self::COMPLETED_ROUTE)
+            ->withStepRoute(self::STEP_ROUTE)
+            ->withSteps($steps)
+        ;
+
+        $this
+            ->wizard
+            ->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET))
+        ;
+
+        for ($step = 0; $step < $pauseStep; $step++) {
+            $this
+                ->wizard
+                ->step($steps[$step], new ServerRequest(method: Method::GET))
+            ;
+            $this
+                ->wizard
+                ->step($steps[$step], new ServerRequest(method: Method::POST))
+            ;
+        }
+
+        $paused = $this
+            ->wizard
+            ->pause();
+
+        // new $wizard
+        $session = new Session();
+        $wizard = new Wizard(
+            new Dispatcher($this->createProvider()),
+            new ResponseFactory(),
+            $session,
+            $this->createUrlGenerator()
+        );
+
+        $wizard->resume($paused);
+
+        $wizard->step(Wizard::EMPTY_STEP, new ServerRequest(method: Method::GET));
+
+        $this->assertSame('step_4', $wizard->getCurrentStep());
+
+        $c = count($steps);
+        for ($step = $pauseStep; $step < $c; $step++) {
+            $wizard->step($steps[$step], new ServerRequest(method: Method::GET));
+            $result = $wizard->step($steps[$step], new ServerRequest(method: Method::POST));
+        }
+
+        $this->assertSame(1, $this->events[AfterWizard::class]);
+        $this->assertSame($expectedData, $wizard->getData());
+        $this->assertSame([self::COMPLETED_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
     }
 
     public static function branchProvider(): Generator
@@ -648,6 +703,16 @@ class WizardTest extends TestCase
         }
     }
 
+    private function createProvider(): Provider
+    {
+        return new Provider((new ListenerCollection())
+            ->add([$this, 'afterWizard'], AfterWizard::class)
+            ->add([$this, 'beforeWizard'], BeforeWizard::class)
+            ->add([$this, 'step'], Step::class)
+            ->add([$this, 'stepExpired'], StepExpired::class)
+        );
+    }
+
     private function createUrlGenerator(): UrlGeneratorInterface {
         $routes = [
             Route::get(self::COMPLETED_ROUTE_PATTERN)
@@ -672,7 +737,6 @@ class WizardTest extends TestCase
     // --------------
     // Event Handlers
     // --------------
-
     public function afterWizard(AfterWizard $event): void
     {
         $this->events[AfterWizard::class]++;

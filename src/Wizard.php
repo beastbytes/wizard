@@ -84,11 +84,15 @@ final class Wizard
      * @var bool If TRUE previously completed steps can not be reprocessed.
      */
     private bool $forwardOnly = !self::FORWARD_ONLY;
+    /**
+     * Used during pause() and resume()
+     */
+    private array $sessionData = [];
     private string $stepRoute = '';
     private string $stepParameter = self::STEP_PARAMETER;
     private array $steps = [];
     /**
-     * @var int Step stepTimeout in seconds; 0 === no stepTimeout
+     * @var int Step stepTimeout in seconds
      */
     private int $stepTimeout = self::NO_STEP_TIMEOUT;
     private string $branchKey = '';
@@ -229,6 +233,13 @@ final class Wizard
     {
         $new = clone $this;
         $new->expiredRoute = $expiredRoute;
+        return $new;
+    }
+
+    public function withPausedRoute(string $pausedRoute): self
+    {
+        $new = clone $this;
+        $new->pausedRoute = $pausedRoute;
         return $new;
     }
 
@@ -567,17 +578,6 @@ final class Wizard
             ;
     }
 
-    private function end(): bool
-    {
-        $event = new AfterWizard($this);
-        $this
-            ->eventDispatcher
-            ->dispatch($event)
-        ;
-
-        return false;
-    }
-
     /**
      * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
      */
@@ -747,5 +747,76 @@ final class Wizard
                     ->generate($route, $parameters)
             )
         ;
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function pause(): string
+    {
+        foreach ([
+            $this->branchKey,
+            $this->dataKey,
+            $this->repetitionIndexKey,
+            $this->stepsKey,
+            $this->stepTimeoutKey,
+        ] as $sessionKey) {
+            $this->sessionData[$sessionKey] = $this
+                ->session
+                ->get($sessionKey)
+            ;
+        }
+
+        return serialize([
+            $this->sessionKey,
+            $this->autoAdvance,
+            $this->completedRoute,
+            $this->currentStep,
+            $this->defaultBranch,
+            $this->expiredRoute,
+            $this->forwardOnly,
+            $this->sessionData,
+            $this->stepRoute,
+            $this->stepParameter,
+            $this->steps,
+            $this->stepTimeout,
+            $this->branchKey,
+            $this->dataKey,
+            $this->repetitionIndexKey,
+            $this->stepsKey,
+            $this->stepTimeoutKey,
+        ]);
+    }
+
+    public function resume(string $data): void
+    {
+        [
+            $this->sessionKey,
+            $this->autoAdvance,
+            $this->completedRoute,
+            $this->currentStep,
+            $this->defaultBranch,
+            $this->expiredRoute,
+            $this->forwardOnly,
+            $this->sessionData,
+            $this->stepRoute,
+            $this->stepParameter,
+            $this->steps,
+            $this->stepTimeout,
+            $this->branchKey,
+            $this->dataKey,
+            $this->repetitionIndexKey,
+            $this->stepsKey,
+            $this->stepTimeoutKey,
+        ] = unserialize($data, ['allowed_classes' => false]);
+
+        foreach ($this->sessionData as $key => $value) {
+            $this
+                ->session
+                ->set($key, $value)
+            ;
+        }
+
+        $this->sessionData = [];
     }
 }
