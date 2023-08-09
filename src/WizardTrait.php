@@ -9,16 +9,26 @@ declare(strict_types=1);
 namespace BeastBytes\Wizard;
 
 use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Yiisoft\Router\CurrentRoute;
 
 trait WizardTrait
 {
     private Wizard $wizard;
 
-    public function wizard(string $step = ''): ResponseInterface
+    /**
+     * @throws \BeastBytes\Wizard\Exception\RuntimeException
+     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     */
+    public function wizard(
+        CurrentRoute $currentRoute,
+        ServerRequestInterface $request
+    ): ResponseInterface
     {
+        $step = $currentRoute->getArgument('step');
         return $this
             ->wizard
-            ->step($step)
+            ->step($step, $request)
         ;
     }
 }

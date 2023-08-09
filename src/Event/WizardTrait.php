@@ -25,11 +25,6 @@ trait WizardTrait
         return $this;
     }
 
-    public function getStep(): string
-    {
-        return $this->step;
-    }
-
     public function getWizard(): Wizard
     {
         return $this->wizard;

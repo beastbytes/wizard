@@ -38,7 +38,6 @@ final class Wizard
     public const EMPTY_STEP = '';
     public const FORWARD_ONLY = true;
     public const INVALID_STEP_EXCEPTION = '"{step}" is not a valid step';
-    public const NEXT_STEP_EXCEPTION = 'Step::nextStep cannot be a string if Wizard::autoAdvance is TRUE';
     public const NOT_STARTED_EXCEPTION = 'wizard has not started';
     public const NOT_STARTED_EXCEPTION_INFO = 'Start wizard using step()';
     public const ROUTE_NOT_SET_EXCEPTION = '"{route}" not set';
@@ -121,14 +120,7 @@ final class Wizard
                 (!$this->hasStarted() && !$this->start())
                 || $this->hasCompleted()
             ) {
-                $event = new AfterWizard($this);
-
-                $this
-                    ->eventDispatcher
-                    ->dispatch($event)
-                ;
-
-                return $this->createResponse($this->completedRoute);
+                return $this->end();
             }
 
             return $this
@@ -159,6 +151,10 @@ final class Wizard
             if ($request->getMethod() === Method::POST) {
                 $this->saveStepData($step, $event->getData());
 
+                if (!$event->shouldContinue()) {
+                    return $this->end();
+                }
+
                 $branches = $event->getBranches();
                 if (!empty($branches)) {
                     $this->branch($branches);
@@ -186,6 +182,10 @@ final class Wizard
                         [$this->stepParameter => $this->getNextStep($event)]
                     )
                 ;
+            }
+
+            if (!$event->shouldContinue()) {
+                return $this->end();
             }
 
             if ($this->stepTimeout) {
@@ -233,13 +233,6 @@ final class Wizard
     {
         $new = clone $this;
         $new->expiredRoute = $expiredRoute;
-        return $new;
-    }
-
-    public function withPausedRoute(string $pausedRoute): self
-    {
-        $new = clone $this;
-        $new->pausedRoute = $pausedRoute;
         return $new;
     }
 
@@ -388,6 +381,7 @@ final class Wizard
      * If Wizard::forwardOnly === TRUE this results in an invalid step.
      *
      * @param ?Step $event The current step event
+     * @throws \BeastBytes\Wizard\Exception\RuntimeException
      */
     private function getNextStep(?Step $event = null): string
     {
@@ -423,10 +417,6 @@ final class Wizard
         ;
 
         if (is_string($goto)) {
-            if ($this->autoAdvance) {
-                throw new RuntimeException(self::NEXT_STEP_EXCEPTION);
-            }
-
             $this
                 ->session
                 ->set(
@@ -502,17 +492,12 @@ final class Wizard
                 ->set($this->repetitionIndexKey, 0)
             ;
         } else {
-            $steps = array_keys(
-                $this
-                    ->session
-                    ->get($this->stepsKey)
-            );
-            $index = array_search($event->getStep(), $steps, true) + 1;
-            $nextStep = ($index === count(
-                $this
-                    ->session
-                    ->get($this->stepsKey)
-            )
+            $steps = $this
+                ->session
+                ->get($this->stepsKey)
+            ;
+            $index = array_search($this->getCurrentStep(), $steps, true) + 1;
+            $nextStep = ($index === $this->getStepCount()
                 ? self::EMPTY_STEP // wizard has finished
                 : $steps[$index]
             );
@@ -529,6 +514,21 @@ final class Wizard
         }
 
         return $nextStep;
+    }
+
+    /**
+     * @return int The number of steps. This may change depending on the path when using PBN
+     */
+    public function getStepCount(): int
+    {
+        return $this->hasStarted()
+            ? count(
+                    $this
+                        ->session
+                        ->get($this->stepsKey)
+                )
+            : 0
+        ;
     }
 
     private function hasCompleted(): bool
@@ -557,25 +557,25 @@ final class Wizard
 
     private function isValidStep(string $step): bool
     {
-        if (!$this->hasStarted()) {
-            return false;
+        $steps = $this
+            ->session
+            ->get($this->stepsKey)
+        ;
+
+        if (in_array($step, $steps, true)) {
+            if ($this->forwardOnly) {
+                return (
+                    array_search($step, $steps, true)
+                    === array_search($this->getExpectedStep(), $steps, true)
+                );
+            }
+            return (
+                array_search($step, $steps, true)
+                <= array_search($this->getExpectedStep(), $steps, true)
+            );
         }
 
-        $steps = array_keys(
-            $this
-                ->session
-                ->get($this->stepsKey)
-        );
-        $index = array_search($step, $steps, true);
-        $expectedStep = $this->getExpectedStep(); // self::EMPTY_STEP if wizard finished
-
-        return $index === 0
-            || ($index >= 0 && ($this->forwardOnly
-                    ? $expectedStep !== self::EMPTY_STEP && $index === array_search($expectedStep, $steps, true)
-                    : $expectedStep === self::EMPTY_STEP || $index <= array_search($expectedStep, $steps, true)
-                ))
-            || $expectedStep === self::EMPTY_STEP
-            ;
+        return $this->getExpectedStep() === self::EMPTY_STEP;
     }
 
     /**
@@ -669,6 +669,18 @@ final class Wizard
         return true;
     }
 
+    private function end(): ResponseInterface
+    {
+        $event = new AfterWizard($this);
+
+        $this
+            ->eventDispatcher
+            ->dispatch($event)
+        ;
+
+        return $this->createResponse($this->completedRoute);
+    }
+
     private function parseSteps(array $steps): array
     {
         $parsed = [];
@@ -691,14 +703,7 @@ final class Wizard
                         || ($branchDirective === null && $defaultBranchEnabled === false && $this->defaultBranch)
                     ) {
                         $defaultBranchEnabled = true;
-
-                        if (is_array($branchSteps)) {
-                            foreach ($this->parseSteps($branchSteps) as $branchStep) {
-                                $parsed[] = $branchStep;
-                            }
-                        } else {
-                            $parsed[] = $branchSteps;
-                        }
+                        array_push($parsed, ...$branchSteps);
                     }
                 }
             } else {
@@ -722,9 +727,9 @@ final class Wizard
         ;
 
         if ($repetitionIndex === 0) {
-            if (isset($data[$step][0])) {
+            if (isset($data[$step][0])) { // repeat of first in repeated steps
                 $data[$step][0] = $stepData;
-            } else {
+            } else { // non-repeating step
                 $data[$step] = $stepData;
             }
         } elseif ($repetitionIndex === 1) {
