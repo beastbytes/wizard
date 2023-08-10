@@ -59,6 +59,7 @@ class WizardTest extends TestCase
     private const REPEAT_STEP = 'repeat_step';
     private const RETURN_TO_STEP = 'return_to_step';
     private const TOO_FAR_STEP = 'too_far';
+    private const STEP_PARAMETER = 'step';
     private const STEP_ROUTE = 'stepRoute';
     private const STEP_ROUTE_PATTERN = '/wizard';
     private const TIMEOUT_STEP = 'timeout_step';
@@ -862,6 +863,61 @@ class WizardTest extends TestCase
         $this->assertSame($expectedData, $wizard->getData());
     }
 
+    public function test_step_parameter()
+    {
+        $this->wizard = new Wizard(
+            new Dispatcher($this->createProvider()),
+            new ResponseFactory(),
+            self::$session,
+            $this->createUrlGenerator( '/wizard/{step: \w+}')
+        );
+
+        $steps = ['step_1', self::REPEAT_STEP, 'step_3'];
+
+        $this->wizard = $this
+            ->wizard
+            ->withCompletedRoute(self::COMPLETED_ROUTE)
+            ->withExpiredRoute(self::EXPIRED_ROUTE)
+            ->withStepRoute(self::STEP_ROUTE)
+            ->withStepParameter(self::STEP_PARAMETER)
+            ->withStepTimeout(self::STEP_TIMEOUT)
+            ->withSteps($steps)
+        ;
+
+        $count = 0;
+        do {
+            $this
+                ->wizard
+                ->step(new ServerRequest(method: Method::GET))
+            ;
+            $result = $this
+                ->wizard
+                ->step(new ServerRequest(method: Method::POST))
+            ;
+
+            if ($result->getHeader(Header::LOCATION) !== [self::COMPLETED_ROUTE_PATTERN]) {
+                if (
+                    $this
+                        ->wizard
+                        ->getCurrentStep()
+                    === self::REPEAT_STEP
+                ) {
+                    $this->assertSame(
+                        ['/wizard/' . self::REPEAT_STEP . ($count ? "_$count" : '')],
+                        $result->getHeader(Header::LOCATION)
+                    );
+                    $count++;
+                } else {
+                    $this->assertSame(
+                        ['/wizard/' . $this->wizard->getCurrentStep()],
+                        $result->getHeader(Header::LOCATION)
+                    );
+                }
+            }
+        } while ($result->getHeader(Header::LOCATION) !== [self::COMPLETED_ROUTE_PATTERN]);
+
+    }
+
     public static function autoAdvanceProvider(): Generator
     {
         foreach ([
@@ -1123,13 +1179,13 @@ class WizardTest extends TestCase
         );
     }
 
-    private function createUrlGenerator(): UrlGeneratorInterface {
+    private function createUrlGenerator(string $stepRoutePattern = self::STEP_ROUTE_PATTERN): UrlGeneratorInterface {
         $routes = [
             Route::get(self::COMPLETED_ROUTE_PATTERN)
                  ->name(self::COMPLETED_ROUTE),
             Route::get(self::EXPIRED_ROUTE_PATTERN)
                  ->name(self::EXPIRED_ROUTE),
-            Route::methods([Method::GET, Method::POST], self::STEP_ROUTE_PATTERN)
+            Route::methods([Method::GET, Method::POST], $stepRoutePattern)
                  ->name(self::STEP_ROUTE),
         ];
         $routeCollection = $this->createRouteCollection($routes);

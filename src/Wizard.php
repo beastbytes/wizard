@@ -37,9 +37,6 @@ final class Wizard
     public const DEFAULT_BRANCH = true;
     public const EMPTY_STEP = '';
     public const FORWARD_ONLY = true;
-    public const INVALID_STEP_EXCEPTION = '"{step}" is not a valid step';
-    public const NOT_STARTED_EXCEPTION = 'wizard has not started';
-    public const NOT_STARTED_EXCEPTION_INFO = 'Start wizard using step()';
     public const ROUTE_NOT_SET_EXCEPTION = '"{route}" not set';
     public const ROUTE_NOT_SET_EXCEPTION_INFO= 'Set "{route}" using {method} method';
     public const STEPS_NOT_SET_EXCEPTION = '"steps" not set';
@@ -51,7 +48,6 @@ final class Wizard
     public const STEPS_KEY = 'steps';
     public const STEP_TIMEOUT_KEY = 'stepTimeout';
     private const NO_STEP_TIMEOUT = 0;
-    public const STEP_PARAMETER = 'step';
 
     /**
      * @var string The session key to hold wizard information
@@ -88,7 +84,7 @@ final class Wizard
      */
     private array $sessionData = [];
     private string $stepRoute = '';
-    private string $stepParameter = self::STEP_PARAMETER;
+    private string $stepParameter = '';
     private array $steps = [];
     /**
      * @var int Step stepTimeout in seconds
@@ -160,7 +156,7 @@ final class Wizard
                 return $this->end();
             }
 
-            return $this->createResponse($this->stepRoute);
+            return $this->createResponse($this->stepRoute, $this->getStepParameter());
         }
 
         if (!$event->shouldContinue()) {
@@ -174,7 +170,7 @@ final class Wizard
             ;
         }
 
-        return $this->createResponse($this->stepRoute);
+        return $this->createResponse($this->stepRoute, $this->getStepParameter());
     }
 
     public function withAutoAdvance(bool $autoAdvance): self
@@ -216,6 +212,13 @@ final class Wizard
     {
         $new = clone $this;
         $new->sessionKey = $sessionKey;
+        return $new;
+    }
+
+    public function withStepParameter(string $stepParameter): self
+    {
+        $new = clone $this;
+        $new->stepParameter = $stepParameter;
         return $new;
     }
 
@@ -489,6 +492,19 @@ final class Wizard
         }
 
         return $nextStep;
+    }
+
+    private function getStepParameter(): array
+    {
+        if ($this->stepParameter) {
+            $repetitionIndex = $this->session->get($this->repetitionIndexKey, 0);
+            return [
+                $this->stepParameter => $this->getCurrentStep()
+                    . ($repetitionIndex > 0 ? '_' . (string)$repetitionIndex : '')
+            ];
+        }
+
+        return [];
     }
 
     private function isValidStep(string $step): bool
