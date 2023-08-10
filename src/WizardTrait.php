@@ -20,15 +20,11 @@ trait WizardTrait
      * @throws \BeastBytes\Wizard\Exception\RuntimeException
      * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
      */
-    public function wizard(
-        CurrentRoute $currentRoute,
-        ServerRequestInterface $request
-    ): ResponseInterface
+    public function wizard(ServerRequestInterface $request): ResponseInterface
     {
-        $step = $currentRoute->getArgument('step');
         return $this
             ->wizard
-            ->step($step, $request)
+            ->step($request)
         ;
     }
 }

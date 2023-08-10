@@ -53,9 +53,12 @@ class WizardTest extends TestCase
     private const BACK_STEP = 'back_step';
     private const BRANCH_STEP = 'branch_step';
     private const END_STEP = 'end_step';
+    private const GOTO_STEP = 'goto_step';
+    private const NON_EXISTENT_STEP = 'non_existent_step';
     private const PAUSE_STEP = 'pause_step';
     private const REPEAT_STEP = 'repeat_step';
     private const RETURN_TO_STEP = 'return_to_step';
+    private const TOO_FAR_STEP = 'too_far';
     private const STEP_ROUTE = 'stepRoute';
     private const STEP_ROUTE_PATTERN = '/wizard';
     private const TIMEOUT_STEP = 'timeout_step';
@@ -64,6 +67,7 @@ class WizardTest extends TestCase
     private array $branches;
     private bool $continue;
     private bool $endOnGet;
+    private string $goto;
     private bool $repeatGoBack;
     private int $repeatGoBackIndex;
     private array $events;
@@ -625,6 +629,118 @@ class WizardTest extends TestCase
 
     /**
      * @throws \BeastBytes\Wizard\Exception\RuntimeException
+     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     */
+    #[DataProvider('gotoProvider')]
+    public function test_goto_step(string $goto, bool $autoAdvance, bool $forwardOnly): void
+    {
+        $steps = [
+            'step_1',
+            self::RETURN_TO_STEP,
+            'step_3',
+            self::GOTO_STEP,
+            'step_5',
+            'step_6',
+            self::TOO_FAR_STEP,
+            'step_8'
+        ];
+
+        $this->goto = $goto;
+
+        $this->wizard = $this
+            ->wizard
+            ->withCompletedRoute(self::COMPLETED_ROUTE)
+            ->withStepRoute(self::STEP_ROUTE)
+            ->withAutoAdvance($autoAdvance)
+            ->withForwardOnly($forwardOnly)
+            ->withSteps($steps)
+        ;
+
+        do {
+            $this
+                ->wizard
+                ->step(new ServerRequest(method: Method::GET))
+            ;
+            $this
+                ->wizard
+                ->step(new ServerRequest(method: Method::POST))
+            ;
+        } while (
+            $this
+                ->wizard
+                ->getCurrentStep()
+            !== self::GOTO_STEP
+        );
+
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::GET))
+        ;
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::POST))
+        ;
+
+        $index = array_search(self::GOTO_STEP, $steps);
+        if (
+            $forwardOnly
+            || $goto === self::NON_EXISTENT_STEP
+            || $goto === self::TOO_FAR_STEP
+        ) {
+            $this->assertSame(
+                $steps[$index + 1],
+                $this
+                    ->wizard
+                    ->getCurrentStep()
+            );
+        } else {
+            $this->assertSame(
+                $goto,
+                $this
+                    ->wizard
+                    ->getCurrentStep()
+            );
+        }
+
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::GET))
+        ;
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::POST))
+        ;
+
+        if (
+            $forwardOnly
+            || $goto === self::NON_EXISTENT_STEP
+            || $goto === self::TOO_FAR_STEP
+        ) {
+            $this->assertSame(
+                $steps[$index + 2],
+                $this
+                    ->wizard
+                    ->getCurrentStep()
+            );
+        } elseif ($autoAdvance) {
+            $this->assertSame(
+                $steps[$index + 1],
+                $this
+                    ->wizard
+                    ->getCurrentStep()
+            );
+        } else {
+            $this->assertSame(
+                $steps[array_search($goto, $steps) + 1],
+                $this
+                    ->wizard
+                    ->getCurrentStep()
+            );
+        }
+    }
+
+    /**
+     * @throws \BeastBytes\Wizard\Exception\RuntimeException
      */
     public function test_timeout_step_no_expired_route(): void
     {
@@ -677,6 +793,10 @@ class WizardTest extends TestCase
         $this->assertSame([self::EXPIRED_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
     }
 
+    /**
+     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     * @throws \BeastBytes\Wizard\Exception\RuntimeException
+     */
     public function test_pause_and_resume(): void
     {
         $steps = ['step_1', 'step_2', self::PAUSE_STEP, 'step_4', 'step_5'];
@@ -721,7 +841,7 @@ class WizardTest extends TestCase
 
         self::$session->destroy();
 
-        // new $wizard
+        // Use local $wizard from here
         self::$session = new Session();
         $wizard = new Wizard(
             new Dispatcher($this->createProvider()),
@@ -733,14 +853,8 @@ class WizardTest extends TestCase
         $wizard->resume($paused);
 
         do {
-            $this
-                ->wizard
-                ->step(new ServerRequest(method: Method::GET))
-            ;
-            $result = $this
-                ->wizard
-                ->step(new ServerRequest(method: Method::POST))
-            ;
+            $wizard->step(new ServerRequest(method: Method::GET));
+            $result = $wizard->step(new ServerRequest(method: Method::POST));
         } while ($result->getHeader(Header::LOCATION) === [self::STEP_ROUTE_PATTERN]);
 
         $this->assertSame(1, $this->events[AfterWizard::class]);
@@ -899,6 +1013,74 @@ class WizardTest extends TestCase
         }
     }
 
+    public static function gotoProvider(): Generator
+    {
+        foreach ([
+            'Non-existent / autoAdvance / forwardOnly' => [
+                'goto' => self::NON_EXISTENT_STEP,
+                'autoAdvance' => Wizard::FORWARD_ONLY,
+                'forwardOnly' => Wizard::FORWARD_ONLY,
+            ],
+            'Non-existent / !autoAdvance / forwardOnly' => [
+                'goto' => self::NON_EXISTENT_STEP,
+                'autoAdvance' => !Wizard::FORWARD_ONLY,
+                'forwardOnly' => Wizard::FORWARD_ONLY,
+            ],
+            'Non-existent / autoAdvance / !forwardOnly' => [
+                'goto' => self::NON_EXISTENT_STEP,
+                'autoAdvance' => Wizard::FORWARD_ONLY,
+                'forwardOnly' => !Wizard::FORWARD_ONLY,
+            ],
+            'Non-existent / !autoAdvance / !forwardOnly' => [
+                'goto' => self::NON_EXISTENT_STEP,
+                'autoAdvance' => !Wizard::FORWARD_ONLY,
+                'forwardOnly' => !Wizard::FORWARD_ONLY,
+            ],
+            'Return to / autoAdvance / forwardOnly' => [
+                'goto' => self::RETURN_TO_STEP,
+                'autoAdvance' => Wizard::FORWARD_ONLY,
+                'forwardOnly' => Wizard::FORWARD_ONLY,
+            ],
+            'Return to / !autoAdvance / forwardOnly' => [
+                'goto' => self::RETURN_TO_STEP,
+                'autoAdvance' => !Wizard::FORWARD_ONLY,
+                'forwardOnly' => Wizard::FORWARD_ONLY,
+            ],
+            'Return to / autoAdvance / !forwardOnly' => [
+                'goto' => self::RETURN_TO_STEP,
+                'autoAdvance' => Wizard::FORWARD_ONLY,
+                'forwardOnly' => !Wizard::FORWARD_ONLY,
+            ],
+            'Return to / !autoAdvance / !forwardOnly' => [
+                'goto' => self::RETURN_TO_STEP,
+                'autoAdvance' => !Wizard::FORWARD_ONLY,
+                'forwardOnly' => !Wizard::FORWARD_ONLY,
+            ],
+            'Too far / autoAdvance / forwardOnly' => [
+                'goto' => self::TOO_FAR_STEP,
+                'autoAdvance' => Wizard::FORWARD_ONLY,
+                'forwardOnly' => Wizard::FORWARD_ONLY,
+            ],
+            'Too far / !autoAdvance / forwardOnly' => [
+                'goto' => self::TOO_FAR_STEP,
+                'autoAdvance' => !Wizard::FORWARD_ONLY,
+                'forwardOnly' => Wizard::FORWARD_ONLY,
+            ],
+            'Too far / autoAdvance / !forwardOnly' => [
+                'goto' => self::TOO_FAR_STEP,
+                'autoAdvance' => Wizard::FORWARD_ONLY,
+                'forwardOnly' => !Wizard::FORWARD_ONLY,
+            ],
+            'Too far / !autoAdvance / !forwardOnly' => [
+                'goto' => self::TOO_FAR_STEP,
+                'autoAdvance' => !Wizard::FORWARD_ONLY,
+                'forwardOnly' => !Wizard::FORWARD_ONLY,
+            ],
+        ] as $key => $item) {
+            yield $key => $item;
+        }
+    }
+
     public static function repeatGoBackIndexProvider(): Generator
     {
         foreach([1, 2, 3] as $index) {
@@ -1006,6 +1188,9 @@ class WizardTest extends TestCase
                     break;
                 case self::END_STEP:
                     $event->continue(false);
+                    break;
+                case self::GOTO_STEP:
+                    $event->setGoto($this->goto);
                     break;
                 case self::REPEAT_STEP:
                     if ($this->repeatGoBack && $this->index === $this->repeatGoBackIndex) {

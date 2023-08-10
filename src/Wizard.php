@@ -115,11 +115,12 @@ final class Wizard
      */
     public function step(ServerRequestInterface $request): ResponseInterface
     {
-        if (
-            (!$this->hasStarted() && !$this->start())
-            || $this->hasCompleted()
-        ) {
-            return $this->end();
+        if (!$this->hasStarted()) {
+            if ($this->start()) {
+                $this->setCurrentStep($this->getNextStep());
+            } else {
+                return $this->end();
+            }
         }
 
         $event = new Step($this, $request);
@@ -153,7 +154,7 @@ final class Wizard
                 return $this->createResponse($this->expiredRoute);
             }
 
-            $this->nextStep($event);
+            $this->setCurrentStep($this->getNextStep($event));
 
             if ($this->currentStep === self::EMPTY_STEP) {
                 return $this->end();
@@ -218,13 +219,6 @@ final class Wizard
         return $new;
     }
 
-    public function withStepParameter(string $stepParameter): self
-    {
-        $new = clone $this;
-        $new->stepParameter = $stepParameter;
-        return $new;
-    }
-
     public function withStepRoute(string $stepRoute): self
     {
         $new = clone $this;
@@ -285,6 +279,19 @@ final class Wizard
         }
 
         return $data[$step] ?? [];
+    }
+
+    /**
+     * @return array The active steps. These may change when using PBN
+     */
+    public function getSteps(): array
+    {
+        return $this->hasStarted()
+            ? $this
+                ->session
+                ->get($this->stepsKey)
+            : []
+        ;
     }
 
     /**
@@ -353,37 +360,24 @@ final class Wizard
      * If Wizard::forwardOnly === TRUE this results in an invalid step
      *
      * If a string it is the name of the step to return to. This allows multiple steps to be repeated.
-     * If Wizard::forwardOnly === TRUE this results in an invalid step.
      *
      * @param ?Step $event The current step event
      * @throws \BeastBytes\Wizard\Exception\RuntimeException
      */
-    private function nextStep(?Step $event = null): void
+    private function getNextStep(?Step $event = null): string
     {
-        if ($event === null) { // first step, resumed wizard, or continuing after an invalid step
-            if (
-                $this->autoAdvance
-                && count(
-                    $this
-                        ->session
-                        ->get($this->dataKey)
-                )
-            ) {
-                $nextStep = $this->getExpectedStep();
-            } else {
-                $steps = $this
-                    ->session
-                    ->get($this->stepsKey)
-                ;
-                $nextStep = $steps[0];
-            }
+        if ($event === null) { // first step or resumed wizard
+            $steps = $this
+                ->session
+                ->get($this->stepsKey)
+            ;
+            $nextStep = $steps[0];
 
             $this
                 ->session
                 ->set($this->repetitionIndexKey, 0);
 
-            $this->currentStep = $nextStep;
-            return;
+            return $nextStep;
         }
 
         $goto = $event->getGoto();
@@ -392,7 +386,11 @@ final class Wizard
             ->get($this->repetitionIndexKey)
         ;
 
-        if (is_string($goto)) {
+        if (
+            is_string($goto)
+            && !$this->forwardOnly
+            && $this->isValidStep($goto)
+        ) {
             $this
                 ->session
                 ->set(
@@ -408,8 +406,7 @@ final class Wizard
                 )
             ;
 
-            $this->currentStep = $goto;
-            return;
+            return $goto;
         }
 
         if ($goto === self::DIRECTION_BACKWARD && !$this->forwardOnly) {
@@ -436,11 +433,10 @@ final class Wizard
                     )
                 ;
 
-                $this->currentStep = $nextStep;
-                return;
+                return $nextStep;
             }
 
-            // go to the previous step in a set of repeated steps; no need to update self::currentStep
+            // go to the previous step in a set of repeated steps
             $this
                 ->session
                 ->set(
@@ -449,7 +445,7 @@ final class Wizard
                 )
             ;
 
-            return;
+            return $this->getCurrentStep();
         }
 
         if ($goto === self::DIRECTION_REPEAT) {
@@ -461,7 +457,7 @@ final class Wizard
                 )
             ;
 
-            return;
+            return $this->getCurrentStep();
         }
 
         if ($this->autoAdvance) {
@@ -476,7 +472,7 @@ final class Wizard
                 ->get($this->stepsKey)
             ;
             $index = array_search($this->getCurrentStep(), $steps, true) + 1;
-            $nextStep = ($index === $this->getStepCount()
+            $nextStep = ($index === count($this->getSteps())
                 ? self::EMPTY_STEP // wizard has finished
                 : $steps[$index]
             );
@@ -492,26 +488,23 @@ final class Wizard
             ;
         }
 
-        $this->currentStep = $nextStep;
+        return $nextStep;
     }
 
-    /**
-     * @return int The number of steps. This may change depending on the path when using PBN
-     */
-    public function getStepCount(): int
+    private function isValidStep(string $step): bool
     {
-        return $this->hasStarted()
-            ? count(
-                $this
-                    ->session
-                    ->get($this->stepsKey)
-            )
-            : 0
+        $steps = $this
+            ->session
+            ->get($this->stepsKey)
         ;
-    }
 
-    private function hasCompleted(): bool
-    {
+        if (in_array($step, $steps, true)) {
+            return (
+                array_search($step, $steps, true)
+                <= array_search($this->getExpectedStep(), $steps, true)
+            );
+        }
+
         return $this->getExpectedStep() === self::EMPTY_STEP;
     }
 
@@ -532,6 +525,11 @@ final class Wizard
                 ->session
                 ->get($this->stepTimeoutKey) < time()
             ;
+    }
+
+    private function setCurrentStep(string $currentStep): void
+    {
+        $this->currentStep = $currentStep;
     }
 
     /**
@@ -621,8 +619,6 @@ final class Wizard
             ->session
             ->set($this->stepsKey, $this->parseSteps($this->steps))
         ;
-
-        $this->nextStep();
 
         return true;
     }
