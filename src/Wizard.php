@@ -37,9 +37,6 @@ final class Wizard
     public const DEFAULT_BRANCH = true;
     public const EMPTY_STEP = '';
     public const FORWARD_ONLY = true;
-    public const INVALID_STEP_EXCEPTION = '"{step}" is not a valid step';
-    public const NOT_STARTED_EXCEPTION = 'wizard has not started';
-    public const NOT_STARTED_EXCEPTION_INFO = 'Start wizard using step()';
     public const ROUTE_NOT_SET_EXCEPTION = '"{route}" not set';
     public const ROUTE_NOT_SET_EXCEPTION_INFO= 'Set "{route}" using {method} method';
     public const STEPS_NOT_SET_EXCEPTION = '"steps" not set';
@@ -51,7 +48,6 @@ final class Wizard
     public const STEPS_KEY = 'steps';
     public const STEP_TIMEOUT_KEY = 'stepTimeout';
     private const NO_STEP_TIMEOUT = 0;
-    public const STEP_PARAMETER = 'step';
 
     /**
      * @var string The session key to hold wizard information
@@ -66,7 +62,7 @@ final class Wizard
      *
      * The difference between the "expected step" and the "next step" is when the user goes to a previous step in the
      * wizard; the expected step is the first unprocessed step, the next step is the next step. For example, if the
-     * wizard has 5 steps and the user has completed four of them and then goes back to the second step; the expected
+     * wizard has 5 steps and the user has completed four of them then goes back to the second step; the expected
      * step is the fifth step, the next step is the third step.
      *
      * If {@link $forwardOnly === TRUE} the expected step is the next step
@@ -88,10 +84,16 @@ final class Wizard
      */
     private array $sessionData = [];
     private string $stepRoute = '';
-    private string $stepParameter = self::STEP_PARAMETER;
+    /**
+     * @var string The step parameter for the step action URL; used to generate user-friendly step URLs.
+     *
+     * If empty the step URL will be something like "/wizard".
+     * If provided step URL will be something like "/wizard/step1" , or "/wizard/step2_2" for steps that repeat.
+     */
+    private string $stepParameter = '';
     private array $steps = [];
     /**
-     * @var int Step stepTimeout in seconds
+     * @var int Step timeout in seconds
      */
     private int $stepTimeout = self::NO_STEP_TIMEOUT;
     private string $branchKey = '';
@@ -111,94 +113,69 @@ final class Wizard
 
     /**
      * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
      */
-    public function step(string $step, ServerRequestInterface $request): ResponseInterface
+    public function step(ServerRequestInterface $request): ResponseInterface
     {
-        if ($step === self::EMPTY_STEP) {
-            if (
-                (!$this->hasStarted() && !$this->start())
-                || $this->hasCompleted()
-            ) {
+        if (!$this->hasStarted()) {
+            if ($this->start()) {
+                $this->setCurrentStep($this->getNextStep());
+            } else {
                 return $this->end();
             }
-
-            return $this
-                ->createResponse(
-                    $this->stepRoute,
-                    [$this->stepParameter => $this->getNextStep()]
-                )
-            ;
         }
 
-        if (!$this->hasStarted()) {
-            throw new RuntimeException(
-                self::NOT_STARTED_EXCEPTION,
-                self::NOT_STARTED_EXCEPTION_INFO
-            );
-        }
+        $event = new Step($this, $request);
 
-        if ($this->isValidStep($step)) {
-            $this->currentStep = $step;
-            $event = new Step($this, $request);
+        // The event handler will either render a form or handle data submitted from the form
+        $this
+            ->eventDispatcher
+            ->dispatch($event)
+        ;
 
-            // The event handler will either render a form or handle data submitted from the form
-            $this
-                ->eventDispatcher
-                ->dispatch($event)
-            ;
-
-            if ($request->getMethod() === Method::POST) {
-                $this->saveStepData($step, $event->getData());
-
-                if (!$event->shouldContinue()) {
-                    return $this->end();
-                }
-
-                $branches = $event->getBranches();
-                if (!empty($branches)) {
-                    $this->branch($branches);
-                }
-
-                if ($this->hasStepExpired()) {
-                    $event = new StepExpired($this);
-
-                    $this
-                        ->eventDispatcher
-                        ->dispatch($event)
-                    ;
-
-                    return $this
-                        ->createResponse(
-                            $this->expiredRoute,
-                            [$this->stepParameter => $step]
-                        )
-                    ;
-                }
-
-                return $this
-                    ->createResponse(
-                        $this->stepRoute,
-                        [$this->stepParameter => $this->getNextStep($event)]
-                    )
-                ;
-            }
+        if ($request->getMethod() === Method::POST) {
+            $this->saveStepData($event);
 
             if (!$event->shouldContinue()) {
                 return $this->end();
             }
 
-            if ($this->stepTimeout) {
-                $this
-                    ->session
-                    ->set($this->stepTimeoutKey, time() + $this->stepTimeout)
-                ;
+            $branches = $event->getBranches();
+            if (!empty($branches)) {
+                $this->branch($branches);
             }
 
-            return $this->createResponse($this->stepRoute, [$this->stepParameter => $step]);
+            if ($this->hasStepExpired()) {
+                $event = new StepExpired($this);
+
+                $this
+                    ->eventDispatcher
+                    ->dispatch($event)
+                ;
+
+                return $this->createResponse($this->expiredRoute);
+            }
+
+            $this->setCurrentStep($this->getNextStep($event));
+
+            if ($this->currentStep === self::EMPTY_STEP) {
+                return $this->end();
+            }
+
+            return $this->createResponse($this->stepRoute, $this->getStepParameter());
         }
 
-        throw new InvalidArgumentException(strtr(self::INVALID_STEP_EXCEPTION, ['{step}' => $step]));
+        if (!$event->shouldContinue()) {
+            return $this->end();
+        }
+
+        if ($this->stepTimeout) {
+            $this
+                ->session
+                ->set($this->stepTimeoutKey, time() + $this->stepTimeout)
+            ;
+        }
+
+        return $this->createResponse($this->stepRoute, $this->getStepParameter());
     }
 
     public function withAutoAdvance(bool $autoAdvance): self
@@ -293,7 +270,7 @@ final class Wizard
     }
 
     /**
-     * Reads data stored for a step.
+     * Reads data stored for all steps or a single step.
      *
      * @param string $step The name of the step. If empty the data for all steps are returned.
      * @return array Data for the specified step or data for all steps
@@ -313,7 +290,20 @@ final class Wizard
     }
 
     /**
-     * Select, skip, or deselect branch(es)
+     * @return array The active steps. These may change when using PBN
+     */
+    public function getSteps(): array
+    {
+        return $this->hasStarted()
+            ? $this
+                ->session
+                ->get($this->stepsKey)
+            : []
+        ;
+    }
+
+    /**
+     * Enable or disable branch(es).
      *
      * @param non-empty-array<string, int> $directives Branches as ["branch name" => branchDirective]
      * [key => value]  pairs.
@@ -378,30 +368,17 @@ final class Wizard
      * If Wizard::forwardOnly === TRUE this results in an invalid step
      *
      * If a string it is the name of the step to return to. This allows multiple steps to be repeated.
-     * If Wizard::forwardOnly === TRUE this results in an invalid step.
      *
      * @param ?Step $event The current step event
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
      */
     private function getNextStep(?Step $event = null): string
     {
-        if ($event === null) { // first step, resumed wizard, or continuing after an invalid step
-            if (
-                $this->autoAdvance
-                && count(
-                    $this
-                        ->session
-                        ->get($this->dataKey)
-                )
-            ) {
-                $nextStep = $this->getExpectedStep();
-            } else {
-                $steps = $this
-                    ->session
-                    ->get($this->stepsKey)
-                ;
-                $nextStep = $steps[0];
-            }
+        if ($event === null) { // first step or resumed wizard
+            $steps = $this
+                ->session
+                ->get($this->stepsKey)
+            ;
+            $nextStep = $steps[0];
 
             $this
                 ->session
@@ -416,7 +393,11 @@ final class Wizard
             ->get($this->repetitionIndexKey)
         ;
 
-        if (is_string($goto)) {
+        if (
+            is_string($goto)
+            && !$this->forwardOnly
+            && $this->isValidStep($goto)
+        ) {
             $this
                 ->session
                 ->set(
@@ -482,6 +463,7 @@ final class Wizard
                     $repetitionIndex + 1
                 )
             ;
+
             return $this->getCurrentStep();
         }
 
@@ -497,7 +479,7 @@ final class Wizard
                 ->get($this->stepsKey)
             ;
             $index = array_search($this->getCurrentStep(), $steps, true) + 1;
-            $nextStep = ($index === $this->getStepCount()
+            $nextStep = ($index === count($this->getSteps())
                 ? self::EMPTY_STEP // wizard has finished
                 : $steps[$index]
             );
@@ -516,23 +498,33 @@ final class Wizard
         return $nextStep;
     }
 
-    /**
-     * @return int The number of steps. This may change depending on the path when using PBN
-     */
-    public function getStepCount(): int
+    private function getStepParameter(): array
     {
-        return $this->hasStarted()
-            ? count(
-                    $this
-                        ->session
-                        ->get($this->stepsKey)
-                )
-            : 0
-        ;
+        if ($this->stepParameter) {
+            $repetitionIndex = $this->session->get($this->repetitionIndexKey, 0);
+            return [
+                $this->stepParameter => $this->getCurrentStep()
+                    . ($repetitionIndex > 0 ? '_' . (string)$repetitionIndex : '')
+            ];
+        }
+
+        return [];
     }
 
-    private function hasCompleted(): bool
+    private function isValidStep(string $step): bool
     {
+        $steps = $this
+            ->session
+            ->get($this->stepsKey)
+        ;
+
+        if (in_array($step, $steps, true)) {
+            return (
+                array_search($step, $steps, true)
+                <= array_search($this->getExpectedStep(), $steps, true)
+            );
+        }
+
         return $this->getExpectedStep() === self::EMPTY_STEP;
     }
 
@@ -555,27 +547,9 @@ final class Wizard
             ;
     }
 
-    private function isValidStep(string $step): bool
+    private function setCurrentStep(string $currentStep): void
     {
-        $steps = $this
-            ->session
-            ->get($this->stepsKey)
-        ;
-
-        if (in_array($step, $steps, true)) {
-            if ($this->forwardOnly) {
-                return (
-                    array_search($step, $steps, true)
-                    === array_search($this->getExpectedStep(), $steps, true)
-                );
-            }
-            return (
-                array_search($step, $steps, true)
-                <= array_search($this->getExpectedStep(), $steps, true)
-            );
-        }
-
-        return $this->getExpectedStep() === self::EMPTY_STEP;
+        $this->currentStep = $currentStep;
     }
 
     /**
@@ -714,7 +688,7 @@ final class Wizard
         return $parsed;
     }
 
-    private function saveStepData(string $step, array $stepData): void
+    private function saveStepData(Step $event): void
     {
         $data = $this
             ->session
@@ -727,21 +701,21 @@ final class Wizard
         ;
 
         if ($repetitionIndex === 0) {
-            if (isset($data[$step][0])) { // repeat of first in repeated steps
-                $data[$step][0] = $stepData;
+            if (isset($data[$this->getCurrentStep()][0])) { // repeat of first in repeated steps
+                $data[$this->getCurrentStep()][0] = $event->getData();
             } else { // non-repeating step
-                $data[$step] = $stepData;
+                $data[$this->getCurrentStep()] = $event->getData();
             }
         } elseif ($repetitionIndex === 1) {
-            if (!isset($data[$step][0])) {
-                $temp = $data[$step];
-                unset($data[$step]);
-                $data[$step][0] = $temp;
+            if (!isset($data[$this->getCurrentStep()][0])) {
+                $temp = $data[$this->getCurrentStep()];
+                unset($data[$this->getCurrentStep()]);
+                $data[$this->getCurrentStep()][0] = $temp;
             }
 
-            $data[$step][1] = $stepData;
+            $data[$this->getCurrentStep()][1] = $event->getData();
         } else {
-            $data[$step][$repetitionIndex] = $stepData;
+            $data[$this->getCurrentStep()][$repetitionIndex] = $event->getData();
         }
 
         $this->session->set($this->dataKey, $data);
