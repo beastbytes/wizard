@@ -10,9 +10,9 @@ namespace BeastBytes\Wizard\Event;
 
 trait StepDataTrait
 {
-    private array $data = [];
+    private mixed $data = null;
 
-    public function getData(): array
+    public function getData(): mixed
     {
         return $this->data;
     }
@@ -22,7 +22,7 @@ trait StepDataTrait
         return !empty($this->data);
     }
 
-    public function setData(array $data): void
+    public function setData(mixed $data): void
     {
         $this->data = $data;
     }

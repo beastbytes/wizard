@@ -16,12 +16,14 @@ use BeastBytes\Wizard\Exception\InvalidConfigException;
 use BeastBytes\Wizard\Exception\RuntimeException;
 use BeastBytes\Wizard\Wizard;
 use Generator;
+use HttpSoft\Message\Response;
 use HttpSoft\Message\ResponseFactory;
 use HttpSoft\Message\ServerRequest;
 use InvalidArgumentException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
+use Yiisoft\DataResponse\DataResponse;
 use Yiisoft\EventDispatcher\Dispatcher\Dispatcher;
 use Yiisoft\EventDispatcher\Provider\ListenerCollection;
 use Yiisoft\EventDispatcher\Provider\Provider;
@@ -189,9 +191,7 @@ class WizardTest extends TestCase
             $steps,
             self::$session->get(Wizard::SESSION_KEY . '.' . Wizard::STEPS_KEY)
         );
-        $this->assertSame(Status::FOUND, $result->getStatusCode());
-        $this->assertTrue($result->hasHeader(Header::LOCATION));
-        $this->assertSame([self::STEP_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
+        $this->assertSame(Status::OK, $result->getStatusCode());
     }
 
     /**
@@ -311,7 +311,7 @@ class WizardTest extends TestCase
                 ->step(new ServerRequest(method: Method::GET))
             ;
 
-            if ($result->getHeader(Header::LOCATION) === [self::STEP_ROUTE_PATTERN]) {
+            if ($this->events[AfterWizard::class] === 0) {
                 $result = $this
                     ->wizard
                     ->step(new ServerRequest(method: Method::POST))
@@ -1218,10 +1218,6 @@ class WizardTest extends TestCase
     {
         $this->events[Step::class]++;
 
-        if ($event->getWizard()->getCurrentStep() === self::END_STEP && $this->endOnGet) {
-            $event->continue(false);
-        }
-
         if ($event->getRequest()->getMethod() === Method::POST) {
             $step = $event->getWizard()->getCurrentStep();
             if ($step === self::REPEAT_STEP) {
@@ -1263,6 +1259,11 @@ class WizardTest extends TestCase
                 default:
                     break;
             }
+        } else {
+            if ($this->endOnGet && $event->getWizard()->getCurrentStep() === self::END_STEP) {
+                $event->continue(false);
+            }
+            $event->setData(new Response());
         }
     }
 
