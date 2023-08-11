@@ -62,7 +62,7 @@ final class Wizard
      *
      * The difference between the "expected step" and the "next step" is when the user goes to a previous step in the
      * wizard; the expected step is the first unprocessed step, the next step is the next step. For example, if the
-     * wizard has 5 steps and the user has completed four of them and then goes back to the second step; the expected
+     * wizard has 5 steps and the user has completed four of them then goes back to the second step; the expected
      * step is the fifth step, the next step is the third step.
      *
      * If {@link $forwardOnly === TRUE} the expected step is the next step
@@ -84,10 +84,16 @@ final class Wizard
      */
     private array $sessionData = [];
     private string $stepRoute = '';
+    /**
+     * @var string The step parameter for the step action URL; used to generate user-friendly step URLs.
+     *
+     * If empty the step URL will be something like "/wizard".
+     * If provided step URL will be something like "/wizard/step1" , or "/wizard/step2_2" for steps that repeat.
+     */
     private string $stepParameter = '';
     private array $steps = [];
     /**
-     * @var int Step stepTimeout in seconds
+     * @var int Step timeout in seconds
      */
     private int $stepTimeout = self::NO_STEP_TIMEOUT;
     private string $branchKey = '';
@@ -107,7 +113,6 @@ final class Wizard
 
     /**
      * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
      */
     public function step(ServerRequestInterface $request): ResponseInterface
     {
@@ -265,7 +270,7 @@ final class Wizard
     }
 
     /**
-     * Reads data stored for a step.
+     * Reads data stored for all steps or a single step.
      *
      * @param string $step The name of the step. If empty the data for all steps are returned.
      * @return array Data for the specified step or data for all steps
@@ -298,7 +303,7 @@ final class Wizard
     }
 
     /**
-     * Select, skip, or deselect branch(es)
+     * Enable or disable branch(es).
      *
      * @param non-empty-array<string, int> $directives Branches as ["branch name" => branchDirective]
      * [key => value]  pairs.
@@ -365,7 +370,6 @@ final class Wizard
      * If a string it is the name of the step to return to. This allows multiple steps to be repeated.
      *
      * @param ?Step $event The current step event
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
      */
     private function getNextStep(?Step $event = null): string
     {
