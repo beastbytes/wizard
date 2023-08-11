@@ -175,7 +175,8 @@ final class Wizard
             ;
         }
 
-        return $this->createResponse($this->stepRoute, $this->getStepParameter());
+        /** @psalm-return ResponseInterface */
+        return $event->getData();
     }
 
     public function withAutoAdvance(bool $autoAdvance): self
