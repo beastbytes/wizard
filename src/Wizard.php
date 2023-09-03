@@ -135,7 +135,7 @@ final class Wizard
         if ($request->getMethod() === Method::POST) {
             $this->saveStepData($event);
 
-            if (!$event->shouldContinue()) {
+            if ($event->isPropagationStopped()) {
                 return $this->end();
             }
 
@@ -164,7 +164,7 @@ final class Wizard
             return $this->createResponse($this->stepRoute, $this->getStepParameter());
         }
 
-        if (!$event->shouldContinue()) {
+        if ($event->isPropagationStopped()) {
             return $this->end();
         }
 
@@ -607,7 +607,7 @@ final class Wizard
             ->dispatch($event)
         ;
 
-        if (!$event->shouldContinue()) {
+        if ($event->isPropagationStopped()) {
             return false;
         }
 

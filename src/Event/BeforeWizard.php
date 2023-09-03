@@ -8,7 +8,9 @@ declare(strict_types=1);
 
 namespace BeastBytes\Wizard\Event;
 
-final class BeforeWizard
+use Psr\EventDispatcher\StoppableEventInterface;
+
+final class BeforeWizard implements StoppableEventInterface
 {
-    use WizardTrait;
+    use EventTrait;
 }

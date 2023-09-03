@@ -8,8 +8,10 @@ declare(strict_types=1);
 
 namespace BeastBytes\Wizard\Event;
 
-final class StepExpired
+use Psr\EventDispatcher\StoppableEventInterface;
+
+final class StepExpired implements StoppableEventInterface
 {
     use StepDataTrait;
-    use WizardTrait;
+    use EventTrait;
 }

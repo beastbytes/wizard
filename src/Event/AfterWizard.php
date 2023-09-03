@@ -8,8 +8,10 @@ declare(strict_types=1);
 
 namespace BeastBytes\Wizard\Event;
 
-final class AfterWizard
+use Psr\EventDispatcher\StoppableEventInterface;
+
+final class AfterWizard implements StoppableEventInterface
 {
     use StepDataTrait;
-    use WizardTrait;
+    use EventTrait;
 }

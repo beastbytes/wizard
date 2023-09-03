@@ -17,7 +17,6 @@ trait WizardTrait
     private Wizard $wizard;
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
      * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
      */
     public function wizard(ServerRequestInterface $request): ResponseInterface

@@ -25,6 +25,7 @@
     "require": {
         "php": "^8.0",
         "httpsoft/http-message": "^1.0",
+        "psr/event-dispatcher": "^1.0",
         "yiisoft/arrays": "^3.0",
         "yiisoft/data-response": "^2.0",
         "yiisoft/friendly-exception": "^1.0",
