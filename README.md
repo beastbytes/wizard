@@ -41,7 +41,7 @@ Inject the Wizard in the controller's constructor and initialise it.
 ```php
 public function __construct(
     // other constructor injections
-    private WizardInterface $wizard)
+    private WizardInterface $wizard
 ): void
 {
     // other initialisation
