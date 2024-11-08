@@ -26,7 +26,7 @@ use Yiisoft\Http\Status;
 use Yiisoft\Router\UrlGeneratorInterface;
 use Yiisoft\Session\SessionInterface;
 
-final class Wizard
+final class Wizard implements WizardInterface
 {
     public const AUTO_ADVANCE = true;
     public const BRANCH_DISABLED = -1;
