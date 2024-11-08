@@ -52,6 +52,14 @@
             "BeastBytes\\Wizard\\Tests\\": "tests"
         }
     },
+    "extra": {
+        "config-plugin-options": {
+            "source-directory": "config"
+        },
+        "config-plugin": {
+            "di": "di.php"
+        }
+    },
     "scripts": {
         "infection": "roave-infection-static-analysis-plugin --log-verbosity=all --debug",
         "psalm": "psalm",
