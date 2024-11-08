@@ -13,5 +13,5 @@ use Psr\Http\Message\ServerRequestInterface;
 
 interface WizardInterface
 {
-    public function step(string $step, ServerRequestInterface $request): ResponseInterface;
+    public function step(ServerRequestInterface $request): ResponseInterface;
 }
