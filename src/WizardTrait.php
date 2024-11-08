@@ -1,6 +1,6 @@
 <?php
 /**
- * @copyright Copyright © 2023 BeastBytes - All rights reserved
+ * @copyright Copyright © 2024 BeastBytes - All rights reserved
  * @license BSD 3-Clause
  */
 
@@ -14,8 +14,6 @@ use Yiisoft\Router\CurrentRoute;
 
 trait WizardTrait
 {
-    private Wizard $wizard;
-
     /**
      * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
      */
