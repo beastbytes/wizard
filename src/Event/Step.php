@@ -1,6 +1,6 @@
 <?php
 /**
- * @copyright Copyright © 2023 BeastBytes - All rights reserved
+ * @copyright Copyright © 2024 BeastBytes - All rights reserved
  * @license BSD 3-Clause
  */
 
@@ -10,6 +10,7 @@ namespace BeastBytes\Wizard\Event;
 
 use BeastBytes\Wizard\Wizard;
 use Psr\EventDispatcher\StoppableEventInterface;
+use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
 final class Step implements StoppableEventInterface
@@ -19,6 +20,7 @@ final class Step implements StoppableEventInterface
 
     private array $branches = [];
     private int|string $goto = Wizard::DIRECTION_FORWARD;
+    private ResponseInterface $response;
 
     public function __construct(private Wizard $wizard, private ServerRequestInterface $request)
     {
@@ -37,6 +39,16 @@ final class Step implements StoppableEventInterface
     public function getRequest(): ServerRequestInterface
     {
         return $this->request;
+    }
+
+    public function getResponse(): ResponseInterface
+    {
+        return $this->response;
+    }
+
+    public function setResponse(ResponseInterface $response): void
+    {
+        $this->response = $response;
     }
 
     public function setBranches(array $branches): void
