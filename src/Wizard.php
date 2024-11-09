@@ -44,7 +44,7 @@ final class Wizard implements WizardInterface
     public const BRANCH_KEY = 'branch';
     public const DATA_KEY = 'data';
     public const REPETITION_INDEX_KEY = 'repetitionIndex';
-    public const SESSION_KEY = 'Wizard';
+    public const SESSION_KEY = '__wizard';
     public const STEPS_KEY = 'steps';
     public const STEP_TIMEOUT_KEY = 'stepTimeout';
     private const NO_STEP_TIMEOUT = 0;
@@ -109,21 +109,21 @@ final class Wizard implements WizardInterface
         private UrlGeneratorInterface $urlGenerator
     )
     {
+        $this->setKeyNames();
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     * @throws InvalidConfigException
      */
     public function step(ServerRequestInterface $request): ResponseInterface
     {
         if (!$this->hasStarted()) {
-            if ($this->start()) {
-                $this->setCurrentStep($this->getNextStep());
-            } else {
+            if (!$this->start()) {
                 return $this->end();
             }
         }
 
+        $this->setCurrentStep($this->getNextStep());
         $event = new Step($this, $request);
 
         // The event handler will either render a form or handle data submitted from the form
@@ -135,7 +135,7 @@ final class Wizard implements WizardInterface
         if ($request->getMethod() === Method::POST) {
             $this->saveStepData($event);
 
-            if ($event->isPropagationStopped()) {
+            if ($event->isWizardStopped()) {
                 return $this->end();
             }
 
@@ -155,16 +155,14 @@ final class Wizard implements WizardInterface
                 return $this->createResponse($this->expiredRoute);
             }
 
-            $this->setCurrentStep($this->getNextStep($event));
-
-            if ($this->currentStep === self::EMPTY_STEP) {
+            if ($this->getNextStep($event) === self::EMPTY_STEP) {
                 return $this->end();
             }
 
             return $this->createResponse($this->stepRoute, $this->getStepParameter());
         }
 
-        if ($event->isPropagationStopped()) {
+        if ($event->isWizardStopped()) {
             return $this->end();
         }
 
@@ -176,7 +174,7 @@ final class Wizard implements WizardInterface
         }
 
         /** @psalm-return ResponseInterface */
-        return $event->getData();
+        return $event->getResponse();
     }
 
     public function withAutoAdvance(bool $autoAdvance): self
@@ -218,6 +216,7 @@ final class Wizard implements WizardInterface
     {
         $new = clone $this;
         $new->sessionKey = $sessionKey;
+        $new->setKeyNames();
         return $new;
     }
 
@@ -274,9 +273,9 @@ final class Wizard implements WizardInterface
      * Reads data stored for all steps or a single step.
      *
      * @param string $step The name of the step. If empty the data for all steps are returned.
-     * @return array Data for the specified step or data for all steps
+     * @return mixed Data for the specified step or data for all steps
      */
-    public function getData(string $step = self::EMPTY_STEP): array
+    public function getData(string $step = self::EMPTY_STEP): mixed
     {
         $data = $this
             ->session
@@ -287,7 +286,12 @@ final class Wizard implements WizardInterface
             return $data;
         }
 
-        return $data[$step] ?? [];
+        return $data[$step] ?? null;
+    }
+
+    public function getStepRoute(): string
+    {
+        return $this->stepRoute;
     }
 
     /**
@@ -301,6 +305,89 @@ final class Wizard implements WizardInterface
                 ->get($this->stepsKey)
             : []
         ;
+    }
+
+    /**
+     * @throws \Exception
+     */
+    public function pause(): string
+    {
+        foreach ([
+            $this->branchKey,
+            $this->dataKey,
+            $this->repetitionIndexKey,
+            $this->stepsKey,
+        ] as $sessionKey) {
+            $this->sessionData[$sessionKey] = $this
+                ->session
+                ->get($sessionKey)
+            ;
+        }
+
+        if (
+            $this
+                ->session
+                ->has($this->stepTimeoutKey)
+        ) {
+            $this->sessionData[$this->stepTimeoutKey] = $this
+                ->session
+                ->get($this->stepTimeoutKey)
+            ;
+        }
+
+        $this->reset();
+
+        return serialize([
+            $this->sessionKey,
+            $this->autoAdvance,
+            $this->completedRoute,
+            $this->currentStep,
+            $this->defaultBranch,
+            $this->expiredRoute,
+            $this->forwardOnly,
+            $this->sessionData,
+            $this->stepRoute,
+            $this->stepParameter,
+            $this->steps,
+            $this->stepTimeout,
+            $this->branchKey,
+            $this->dataKey,
+            $this->repetitionIndexKey,
+            $this->stepsKey,
+            $this->stepTimeoutKey,
+        ]);
+    }
+
+    public function resume(string $data): void
+    {
+        [
+            $this->sessionKey,
+            $this->autoAdvance,
+            $this->completedRoute,
+            $this->currentStep,
+            $this->defaultBranch,
+            $this->expiredRoute,
+            $this->forwardOnly,
+            $this->sessionData,
+            $this->stepRoute,
+            $this->stepParameter,
+            $this->steps,
+            $this->stepTimeout,
+            $this->branchKey,
+            $this->dataKey,
+            $this->repetitionIndexKey,
+            $this->stepsKey,
+            $this->stepTimeoutKey,
+        ] = unserialize($data, ['allowed_classes' => false]);
+
+        foreach ($this->sessionData as $key => $value) {
+            $this
+                ->session
+                ->set($key, $value)
+            ;
+        }
+
+        $this->sessionData = [];
     }
 
     /**
@@ -375,11 +462,17 @@ final class Wizard implements WizardInterface
     private function getNextStep(?Step $event = null): string
     {
         if ($event === null) { // first step or resumed wizard
-            $steps = $this
-                ->session
-                ->get($this->stepsKey)
-            ;
-            $nextStep = $steps[0];
+
+
+            if (count($this->getData()) && $this->autoAdvance) {
+                $nextStep = $this->getExpectedStep();
+            } else {
+                $steps = $this
+                    ->session
+                    ->get($this->stepsKey)
+                ;
+                $nextStep = $steps[0];
+            }
 
             $this
                 ->session
@@ -553,6 +646,15 @@ final class Wizard implements WizardInterface
         $this->currentStep = $currentStep;
     }
 
+    private function setKeyNames(): void
+    {
+        $this->branchKey = $this->sessionKey . '.' . self::BRANCH_KEY;
+        $this->dataKey = $this->sessionKey . '.' . self::DATA_KEY;
+        $this->repetitionIndexKey = $this->sessionKey . '.' . self::REPETITION_INDEX_KEY;
+        $this->stepsKey = $this->sessionKey . '.' . self::STEPS_KEY;
+        $this->stepTimeoutKey = $this->sessionKey . '.' . self::STEP_TIMEOUT_KEY;
+    }
+
     /**
      * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
      */
@@ -607,15 +709,9 @@ final class Wizard implements WizardInterface
             ->dispatch($event)
         ;
 
-        if ($event->isPropagationStopped()) {
+        if ($event->isWizardStopped()) {
             return false;
         }
-
-        $this->branchKey = $this->sessionKey . '.' . self::BRANCH_KEY;
-        $this->dataKey = $this->sessionKey . '.' . self::DATA_KEY;
-        $this->repetitionIndexKey = $this->sessionKey . '.' . self::REPETITION_INDEX_KEY;
-        $this->stepsKey = $this->sessionKey . '.' . self::STEPS_KEY;
-        $this->stepTimeoutKey = $this->sessionKey . '.' . self::STEP_TIMEOUT_KEY;
 
         $this
             ->session
@@ -646,8 +742,9 @@ final class Wizard implements WizardInterface
 
     private function end(): ResponseInterface
     {
-        $event = new AfterWizard($this);
+        $this->reset();
 
+        $event = new AfterWizard($this);
         $this
             ->eventDispatcher
             ->dispatch($event)
@@ -734,88 +831,5 @@ final class Wizard implements WizardInterface
                     ->generate($route, $parameters)
             )
         ;
-    }
-
-    /**
-     * @throws \Exception
-     */
-    public function pause(): string
-    {
-        foreach ([
-            $this->branchKey,
-            $this->dataKey,
-            $this->repetitionIndexKey,
-            $this->stepsKey,
-        ] as $sessionKey) {
-            $this->sessionData[$sessionKey] = $this
-                ->session
-                ->get($sessionKey)
-            ;
-        }
-
-        if (
-            $this
-                ->session
-                ->has($this->stepTimeoutKey)
-        ) {
-            $this->sessionData[$this->stepTimeoutKey] = $this
-                ->session
-                ->get($this->stepTimeoutKey)
-            ;
-        }
-
-        $this->reset();
-
-        return serialize([
-            $this->sessionKey,
-            $this->autoAdvance,
-            $this->completedRoute,
-            $this->currentStep,
-            $this->defaultBranch,
-            $this->expiredRoute,
-            $this->forwardOnly,
-            $this->sessionData,
-            $this->stepRoute,
-            $this->stepParameter,
-            $this->steps,
-            $this->stepTimeout,
-            $this->branchKey,
-            $this->dataKey,
-            $this->repetitionIndexKey,
-            $this->stepsKey,
-            $this->stepTimeoutKey,
-        ]);
-    }
-
-    public function resume(string $data): void
-    {
-        [
-            $this->sessionKey,
-            $this->autoAdvance,
-            $this->completedRoute,
-            $this->currentStep,
-            $this->defaultBranch,
-            $this->expiredRoute,
-            $this->forwardOnly,
-            $this->sessionData,
-            $this->stepRoute,
-            $this->stepParameter,
-            $this->steps,
-            $this->stepTimeout,
-            $this->branchKey,
-            $this->dataKey,
-            $this->repetitionIndexKey,
-            $this->stepsKey,
-            $this->stepTimeoutKey,
-        ] = unserialize($data, ['allowed_classes' => false]);
-
-        foreach ($this->sessionData as $key => $value) {
-            $this
-                ->session
-                ->set($key, $value)
-            ;
-        }
-
-        $this->sessionData = [];
     }
 }
