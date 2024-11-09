@@ -1,6 +1,6 @@
 <?php
 /**
- * @copyright Copyright © 2023 BeastBytes - All rights reserved
+ * @copyright Copyright © 2024 BeastBytes - All rights reserved
  * @license BSD 3-Clause
  */
 
@@ -13,6 +13,7 @@ use BeastBytes\Wizard\Wizard;
 trait EventTrait
 {
     private bool $stopPropagation = false;
+    private bool $stopWizard = false;
 
     public function __construct(private Wizard $wizard)
     {
@@ -31,5 +32,15 @@ trait EventTrait
     public function stopPropagation(): void
     {
         $this->stopPropagation = true;
+    }
+
+    public function isWizardStopped(): bool
+    {
+        return $this->stopWizard;
+    }
+
+    public function stopWizard(): void
+    {
+        $this->stopWizard = true;
     }
 }
