@@ -10,7 +10,7 @@ namespace BeastBytes\Wizard;
 
 use BeastBytes\Wizard\Event\Step as StepEvent;
 
-trait StepHandler
+trait StepHandlerTrait
 {
     /** Step event handler */
     public function stepHandler(StepEvent $event): void
