@@ -21,18 +21,16 @@ trait StepHandlerTrait
     /* Step event handler */
     public function stepHandler(StepEvent $event): void
     {
-        if ($event->getWizard()->getId() !== self::class) {
-            return;
-        }
+        if ($event->getWizard()->getId() === self::class) {
+            $step = $event
+                ->getWizard()
+                ->getCurrentStep()
+            ;
 
-        $step = $event
-            ->getWizard()
-            ->getCurrentStep()
-        ;
-
-        if (method_exists($this, $step)) {
-            $this->$step($event);
-            $event->stopPropagation();
+            if (method_exists($this, $step)) {
+                $this->$step($event);
+                $event->stopPropagation();
+            }
         }
     }
 }
