@@ -9,21 +9,21 @@ declare(strict_types=1);
 namespace BeastBytes\Wizard\Event;
 
 use BeastBytes\Wizard\Wizard;
-use Psr\EventDispatcher\StoppableEventInterface;
-use Psr\Http\Message\ResponseInterface;
+use BeastBytes\Wizard\WizardInterface;
 use Psr\Http\Message\ServerRequestInterface;
 
-final class Step implements StoppableEventInterface
+/** @psalm-suppress PropertyNotSetInConstructor */
+final class Step extends BaseEvent
 {
-    use StepDataTrait;
-    use EventTrait;
-
     private array $branches = [];
+    private array $data = [];
     private int|string $goto = Wizard::DIRECTION_FORWARD;
-    private ResponseInterface $response;
 
-    public function __construct(private Wizard $wizard, private ServerRequestInterface $request)
+    use ResponseTrait;
+
+    public function __construct(WizardInterface $wizard, private ServerRequestInterface $request)
     {
+        parent::__construct($wizard);
     }
 
     public function getBranches(): array
@@ -31,33 +31,38 @@ final class Step implements StoppableEventInterface
         return $this->branches;
     }
 
-    public function getGoto(): int|string
-    {
-        return $this->goto;
-    }
-
-    public function getRequest(): ServerRequestInterface
-    {
-        return $this->request;
-    }
-
-    public function getResponse(): ResponseInterface
-    {
-        return $this->response;
-    }
-
-    public function setResponse(ResponseInterface $response): void
-    {
-        $this->response = $response;
-    }
-
     public function setBranches(array $branches): void
     {
         $this->branches = $branches;
     }
 
+    public function getData(): array
+    {
+        return $this->data;
+    }
+
+    public function hasData(): bool
+    {
+        return !empty($this->data);
+    }
+
+    public function setData(array $data): void
+    {
+        $this->data = $data;
+    }
+
+    public function getGoto(): int|string
+    {
+        return $this->goto;
+    }
+
     public function setGoto(int|string $goto): void
     {
         $this->goto = $goto;
+    }
+
+    public function getRequest(): ServerRequestInterface
+    {
+        return $this->request;
     }
 }

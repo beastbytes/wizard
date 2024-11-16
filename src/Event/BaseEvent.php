@@ -8,18 +8,19 @@ declare(strict_types=1);
 
 namespace BeastBytes\Wizard\Event;
 
-use BeastBytes\Wizard\Wizard;
+use BeastBytes\Wizard\WizardInterface;
+use Psr\EventDispatcher\StoppableEventInterface;
 
-trait EventTrait
+abstract class BaseEvent implements StoppableEventInterface
 {
     private bool $stopPropagation = false;
     private bool $stopWizard = false;
 
-    public function __construct(private Wizard $wizard)
+    public function __construct(private WizardInterface $wizard)
     {
     }
 
-    public function getWizard(): Wizard
+    public function getWizard(): WizardInterface
     {
         return $this->wizard;
     }
