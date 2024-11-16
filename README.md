@@ -1,14 +1,14 @@
 # Wizard
-Wizard to handle multi-step forms.
+Wizard to handle multistep forms.
 
 ## Features
 
 - All forms submit to the same URL
 - Next/Previous or Forward Only navigation
 - Looping
-  - repeat one or more steps on a form as many times as needed
+  - repeat one or more steps as many times as needed
 - Plot Branching Navigation (PBN)
-  - allows the form to decide which path to take depending on the user's response
+  - decide which path to take depending on the user's response
 - Step Timeout
   - steps can have a timeout to ensure a user responds within a given time
 - Save/Restore
@@ -28,15 +28,12 @@ php composer.phar require --prefer-dist beastbytes/wizard
 ```
 or add
 ```json
-"beastbytes/wizard": "^1.0"
+"beastbytes/wizard": "*"
 ```
-to the require section of your composer.json.
+to the 'require' section of your composer.json.
 
 ## Usage
 For more explanation and examples see the [Wiki](https://github.com/beastbytes/wizard/wiki).
-### Controller
-#### Constructor
-Inject the Wizard in the controller's constructor and initialise it.
 
 ```php
 public function __construct(
@@ -57,62 +54,146 @@ public function __construct(
 #### Action
 The controller action is very simple:
 ```php
-public function wizard(ServerRequestInterface $request): ResponseInterface
+public function wizard(ServerRequestInterface $request,  WizardInterface $wizard): ResponseInterface
 {
-    return $this
-        ->wizard
+    return $wizard
+        ->withId(self::class) // used when the app uses more than one wizard
+        ->withForwardOnly(true)
+        ->withSteps([
+            'step1',
+            'step2',
+            'step3',
+              ///
+            'stepN',
+        ])
         ->step($request)
     ;
 }
 ```
-_TIP:_ BeastBytes\Wizard\WizardTrait provides the wizard action.
 
 ### Events
-A number of events are raised as the wizard runs. All events can retrieve the wizard instance using
+A number of events are raised as the wizard runs:
+
++ BeforeWizard - Raised before any steps are processed.
++ Step - Raised twice for each step
++ AfterWizard - Raised after all steps are completed
++ StepExpired - Raised if a step has expired
+
+The event handlers are usually methods in the controller using the wizard.
+
+Event handlers can access the wizard instance using
 ```php
-$this->getWizard();
+$wizard = $event->getWizard();
+```
+
+If the application uses more than one wizard, event handlers should ensure that they are the one to handle the event by
+checking the wizard id:
+```php
+$wizardId = $event->getWizard()->getId();
+```
+
+All Wizard events implement the StoppableEventInterface, so if an event handler did handle the event it should stop
+propagation of the event:
+```php
+$event->stopPropagation();
 ```
 
 ##### BeforeWizard
-Raised before the wizard processes any steps. The wizard can be prevented from running with 
+Raised before the wizard processes any steps. The event handler can prevent the wizard from running with 
 ```php
-BeforeWizard::continue(false);
+$event->stopWizard();
 ```
 
 ##### Step
-Raised when processing a step. The event handler for this event does what actions normally do, i.e. rendering the view, and data validation and saving on form submission; this event is raised twice for each step.
+Raised when processing a step. This event is raised at least twice for each step. In many ways the event handler for
+this event is like an action: the first time the event is raised the event handler should render the form for the step
+saving the response to the event, then for the second and subsequent times the event is raised the form has been
+submitted and the event handler validates the form and then either saves the submitted data to the event if
+validation passes or renders the form again if validation fails.
 
-  1. The first time this event is raised the event handler is responsible for rendering the appropriate form in a view.
-  2. The second time the event handler is responsible for data validation and setting the data into the event.
-
-##### Request
-The event handler uses
+The event handler can determine which step the event is being raised for from the currentStep value:
 ```php
-$this
-    ->getWizard()
-    ->getRequest()
-;
+$currentStep = $event->getWizard()->getCurrentStep();
 ```
-to determine the type (Method::GET or Method::POST) of request.
+One technique to keep things tidy and make step event handling more like actions is for the event handler to call
+methods for each individual step.
 
-##### CurrentStep
-The event handler uses
+__TIP:__ Use StepHandlerTrait in the controller; it both checks the Wizard ID and calls methods named for each step.
+
+Methods that render then validate a step's form will look something like:
 ```php
-$this
-    ->getWizard()
-    ->getCurrentStep()
-;
-```
-to determine the step being processed.
+public function step1Handler(StepEvent $event): void
+{
+    $formModel = new Step1Form(); // Step1Form is the form model for step1
 
-##### Saving Data
-The event handler uses
+    if ($this->formHydrator->populateFromPostAndValidate($formModel, $event->getRequest())) {
+        $data = $formModel->getData(); // typically an array of data fields <fieldName => fieldValue> 
+        $event->setData($data);        
+        return; // the wizard creates the response
+    }
+
+    $response = $this->viewRenderer->render('step1', ['formModel' => $formModel]);
+    $event->setResponse($response); // set the response in the event, do not return it
+}
+```
+__TIP:__ See the examples for more complex usage: repeated steps, branching, etc.
+
+##### AfterWizard
+Raised after the wizard has finished. The event handler for this event is responsible for retrieving data from the
+wizard and acting on it, e.g. persisting to a database
+
+Data is retrieved from the wizard using:
 ```php
-$this->saveData($data);
+$event->getWizard()->getData();
 ```
-to save data for the step.
+If only the data for a specific step is required:
+```php
+$event->getWizard()->getData('stepName');
+```
 
-_TIP:_ Use the same for a repeated step; the wizard will correctly save data for all repeated steps.
+The event handler must also render the view indication completion of the wizard and set the response in the event.
+
+The event handler will look something like:
+```php
+public function wizardCompletedHandler(StepEvent $event): void
+{
+    $data = $event->getWizard()->getData();
+    
+    // Save data to database
+    // Raise any application events
+
+    $response = $this->viewRenderer->render('wizardCompleted');
+    $event->setResponse($response); // set the response in the event, do not return it
+}
+```
+
+##### StepExpired
+Raised when processing a step has expired. If this event is raised, the data for all processed steps - including the one
+that expired - will be stored in the Wizard. The event handler should as a minimum render a view and set the response in
+the event; it may also persist data.
+
+The event handler will look something like:
+```php
+public function stepExpiredHandler(StepEvent $event): void
+{
+    $data = $event->getWizard()->getData();
+    $expiredStep = $event->getWizard()->getCurrentStep();
+    
+    // Do something with the data
+    // Raise any application events
+
+    $response = $this->viewRenderer->render('stepExpired', ['expiredStep' => $expiredStep]);
+    $event->setResponse($response); // set the response in the event, do not return it
+}
+```
+
+
+
+
+
+#### From Step
+
+
 
 ##### Next Step
 By default the wizard will move to the next step in the steps array, taking into account any active branches. The event handler can tell the wizard to go to an earlier step or repeat a step using
@@ -131,25 +212,3 @@ THe event handler is responsible for deciding which branches (if any) in the ste
 $this->branches($branches);
 ```
 where _$branches_ is a map: _['branchName' => BranchDirective]_ where _BranchDirective_ is _Wizard::BRANCH_DISABLED_ or _Wizard::BRANCH_ENABLED_.
-
-##### AfterWizard
-Raised after the wizard has finished. This event handler is responsible for retrieving data from the wizard and saving it to models.
-
-Date is retrieved from the wizard using
-```php
-$this
-    ->getWizard()
-    ->getData()
-;
-```
-to get the data for all steps, or
-```php
-$this
-    ->getWizard()
-    ->getData('stepName')
-;
-```
-to get the data for a specific step.
-
-##### StepExpired
-Raised when processing a step has expired. If this event is raised, the step data will be stored in the Wizard.
