@@ -10,8 +10,8 @@
         "wizard"
     ],
     "support": {
-        "issues": "https://github.com/beastbytes/phone-number-validator/issues",
-        "source": "https://github.com/beastbytes/phone-number-validator"
+        "issues": "https://github.com/beastbytes/wizard/issues",
+        "source": "https://github.com/beastbytes/wizard"
     },
     "license": "BSD-3-Clause",
     "authors": [
@@ -40,7 +40,7 @@
         "vimeo/psalm": "^5.0",
         "yiisoft/event-dispatcher": "^1.0",
         "yiisoft/test-support": "^3.0",
-        "yiisoft/yii-view": "^6.0"
+        "yiisoft/yii-view-renderer": "^7.0"
     },
     "autoload": {
         "psr-4": {
