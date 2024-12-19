@@ -46,9 +46,9 @@ final class Step extends BaseEvent
         return !empty($this->data);
     }
 
-    public function setData(array $data): void
+    public function setData(mixed $data): void
     {
-        $this->data = $data;
+        $this->data = is_array($data) ? $data : [$data];
     }
 
     public function getGoto(): int|string
