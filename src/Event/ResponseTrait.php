@@ -19,8 +19,9 @@ trait ResponseTrait
         return $this->response;
     }
 
-    public function setResponse(ResponseInterface $response): void
+    public function setResponse(ResponseInterface $response): self
     {
         $this->response = $response;
+        return $this;
     }
 }
