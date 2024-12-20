@@ -16,7 +16,7 @@ use Psr\Http\Message\ServerRequestInterface;
 final class Step extends BaseEvent
 {
     private array $branches = [];
-    private array $data = [];
+    private mixed $data = null;
     private int|string $goto = Wizard::DIRECTION_FORWARD;
 
     use ResponseTrait;
