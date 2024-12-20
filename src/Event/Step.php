@@ -36,14 +36,14 @@ final class Step extends BaseEvent
         $this->branches = $branches;
     }
 
-    public function getData(): array
+    public function getData(): mixed
     {
         return $this->data;
     }
 
     public function hasData(): bool
     {
-        return !empty($this->data);
+        return $this->data !== null;
     }
 
     public function setData(mixed $data): void
