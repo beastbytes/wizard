@@ -13,23 +13,23 @@ use BeastBytes\Wizard\Event\BeforeWizard;
 use BeastBytes\Wizard\Event\Step;
 use BeastBytes\Wizard\Event\StepExpired;
 use BeastBytes\Wizard\Exception\InvalidConfigException;
-use BeastBytes\Wizard\Exception\RuntimeException;
 use BeastBytes\Wizard\Wizard;
 use Generator;
 use HttpSoft\Message\Response;
 use HttpSoft\Message\ResponseFactory;
 use HttpSoft\Message\ServerRequest;
-use InvalidArgumentException;
+use HttpSoft\Message\UriFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use Yiisoft\DataResponse\DataResponse;
 use Yiisoft\EventDispatcher\Dispatcher\Dispatcher;
 use Yiisoft\EventDispatcher\Provider\ListenerCollection;
 use Yiisoft\EventDispatcher\Provider\Provider;
 use Yiisoft\Http\Header;
 use Yiisoft\Http\Method;
 use Yiisoft\Http\Status;
+use Yiisoft\Router\CurrentRoute;
 use Yiisoft\Router\FastRoute\UrlGenerator;
 use Yiisoft\Router\Group;
 use Yiisoft\Router\Route;
@@ -38,13 +38,10 @@ use Yiisoft\Router\RouteCollectionInterface;
 use Yiisoft\Router\RouteCollector;
 use Yiisoft\Router\UrlGeneratorInterface;
 use Yiisoft\Session\Session;
+use Yiisoft\Strings\Inflector;
 
 class WizardTest extends TestCase
 {
-    private const COMPLETED_ROUTE = 'completedRoute';
-    private const COMPLETED_ROUTE_PATTERN = '/completed';
-    private const EXPIRED_ROUTE = 'expiredRoute';
-    private const EXPIRED_ROUTE_PATTERN = '/expired';
     private const REPETITIONS = [
         'repetition_1',
         'repetition_2',
@@ -63,12 +60,12 @@ class WizardTest extends TestCase
     private const TOO_FAR_STEP = 'too_far';
     private const STEP_PARAMETER = 'step';
     private const STEP_ROUTE = 'stepRoute';
-    private const STEP_ROUTE_PATTERN = '/wizard';
     private const TIMEOUT_STEP = 'timeout_step';
     private const STEP_TIMEOUT = 2;
+    private const URI = '/wizard';
 
     private array $branches;
-    private bool $continue;
+    private array $data;
     private bool $endOnGet;
     private string $goto;
     private bool $repeatGoBack;
@@ -93,16 +90,17 @@ class WizardTest extends TestCase
         ];
 
         $this->index = 0;
-        $this->continue = true;
         $this->endOnGet = false;
         $this->repeatGoBack = false;
 
         $this->wizard = new Wizard(
             new Dispatcher($this->createProvider()),
+            new Inflector(),
             new ResponseFactory(),
             self::$session,
             $this->createUrlGenerator()
         );
+        $this->wizard->reset();
     }
 
     protected function tearDown(): void
@@ -113,11 +111,12 @@ class WizardTest extends TestCase
         ;
     }
 
+    #[Test]
     #[DataProvider('sessionKeyProvider')]
-    public function test_session_key(string $sessionKey): void
+    public function session_key(string $sessionKey): void
     {
         if ($sessionKey === '') {
-            $sessionKey = Wizard::SESSION_KEY;
+            $sessionKey = '__wizard';
         } else {
             $this->wizard = $this
                 ->wizard
@@ -132,56 +131,34 @@ class WizardTest extends TestCase
         $this->assertSame($sessionKey, $reflectionProperty->getValue($this->wizard));
     }
 
-    /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
-     */
-    public function test_no_completed_route(): void
+    #[Test]
+    public function no_steps(): void
     {
         $this->expectException(InvalidConfigException::class);
-        $this->expectExceptionMessage(strtr(Wizard::ROUTE_NOT_SET_EXCEPTION, ['{route}' => self::COMPLETED_ROUTE]));
+        $this->expectExceptionMessage('"steps" not set');
         $this
             ->wizard
             ->step(new ServerRequest(method: Method::GET))
         ;
+        try {
+            $this
+                ->wizard
+                ->step(new ServerRequest(method: Method::GET))
+            ;
+        } catch (InvalidConfigException $exception) {
+            $this->assertSame('Set "steps" using withSteps() method', $exception->getSolution());
+        }
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
+     * @throws InvalidConfigException
      */
-    public function test_no_step_route(): void
-    {
-        $this->expectException(InvalidConfigException::class);
-        $this->expectExceptionMessage(strtr(Wizard::ROUTE_NOT_SET_EXCEPTION, ['{route}' => self::STEP_ROUTE]));
-        $this
-            ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->step(new ServerRequest(method: Method::GET))
-        ;
-    }
-
-    public function test_no_steps(): void
-    {
-        $this->expectException(InvalidConfigException::class);
-        $this->expectExceptionMessage(Wizard::STEPS_NOT_SET_EXCEPTION);
-        $this
-            ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
-            ->step(new ServerRequest(method: Method::GET))
-        ;
-    }
-
-    /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
-     */
-    public function test_start_wizard(): void
+    #[Test]
+    public function start_wizard(): void
     {
         $steps = ['step_1', 'step_2', 'step_3'];
         $result = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withSteps($steps)
             ->step(new ServerRequest(method: Method::GET))
         ;
@@ -189,38 +166,18 @@ class WizardTest extends TestCase
         $this->assertSame(1, $this->events[BeforeWizard::class]);
         $this->assertSame(
             $steps,
-            self::$session->get(Wizard::SESSION_KEY . '.' . Wizard::STEPS_KEY)
+            self::$session->get('__wizard.steps')
         );
-        $this->assertSame(Status::OK, $result->getStatusCode());
-    }
-
-    /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
-     */
-    public function test_start_but_dont_run_wizard(): void
-    {
-        $steps = ['step_1', 'step_2', 'step_3'];
-        $this->continue = false;
-
-        $result = $this
-            ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
-            ->withSteps($steps)
-            ->step(new ServerRequest(method: Method::GET))
-        ;
-
+        $this->assertSame(Status::FOUND, $result->getStatusCode());
         $this->assertEmpty($this->wizard->getData());
-        $this->assertSame([self::COMPLETED_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     * @throws InvalidConfigException
      */
+    #[Test]
     #[DataProvider('autoAdvanceProvider')]
-    public function test_steps(bool $autoAdvance): void
+    public function steps(bool $autoAdvance): void
     {
         $steps = ['step_1', 'step_2', 'step_3'];
         $expectedData = [];
@@ -230,10 +187,12 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withAutoAdvance($autoAdvance)
             ->withSteps($steps)
+        ;
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::GET))
         ;
 
         $count = 0;
@@ -256,34 +215,17 @@ class WizardTest extends TestCase
             ;
 
             $count++;
-        } while ($result->getHeader(Header::LOCATION) === [self::STEP_ROUTE_PATTERN]);
+        } while ($result->getStatusCode() === Status::FOUND);
 
-        $this->assertSame(count($steps), $count);
         $this->assertSame(1, $this->events[AfterWizard::class]);
-        $this->assertSame([self::COMPLETED_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
-
-        $this->assertSame(
-            $expectedData,
-            $this
-                ->wizard
-                ->getData()
-        );
-
-        for ($i = 0; $i < $count; $i++) {
-            $this->assertSame(
-                $expectedData[$steps[$i]],
-                $this
-                    ->wizard
-                    ->getData($steps[$i])
-            );
-        }
+        $this->assertSame($expectedData, $this->data);
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     * @throws InvalidConfigException
      */
-    public function test_end_on_get(): void
+    #[Test]
+    public function end_on_get(): void
     {
         $steps = ['step_1', 'step_2', 'step_3', self::END_STEP, 'step_4', 'step_6'];
         $expectedData = [];
@@ -292,8 +234,6 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withSteps($steps)
         ;
 
@@ -304,7 +244,6 @@ class WizardTest extends TestCase
             }
         }
 
-        $count = 0;
         do {
             $result = $this
                 ->wizard
@@ -317,23 +256,23 @@ class WizardTest extends TestCase
                     ->step(new ServerRequest(method: Method::POST))
                 ;
             }
-            $count++;
-        } while ($result->getHeader(Header::LOCATION) === [self::STEP_ROUTE_PATTERN]);
+        } while ($result->getStatusCode() === Status::FOUND);
 
         $this->assertSame(1, $this->events[AfterWizard::class]);
-        $this->assertSame($expectedData, $this->wizard->getData());
-        $this->assertSame([self::COMPLETED_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
+        $this->assertSame($expectedData, $this->data);
     }
 
-    public function test_end_on_post(): void
+    /**
+     * @throws InvalidConfigException
+     */
+    #[Test]
+    public function end_on_post(): void
     {
         $steps = ['step_1', 'step_2', 'step_3', self::END_STEP, 'step_4', 'step_6'];
         $expectedData = [];
 
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withSteps($steps)
         ;
 
@@ -342,7 +281,6 @@ class WizardTest extends TestCase
             $expectedData[$steps[$i]] = ['key' => $steps[$i] . '-value'];
         }
 
-        $count = 0;
         do {
             $this
                 ->wizard
@@ -352,33 +290,28 @@ class WizardTest extends TestCase
                 ->wizard
                 ->step(new ServerRequest(method: Method::POST))
             ;
-            $count++;
-        } while ($result->getHeader(Header::LOCATION) === [self::STEP_ROUTE_PATTERN]);
+        } while ($result->getStatusCode() === Status::FOUND);
 
         $this->assertSame(1, $this->events[AfterWizard::class]);
-        $this->assertSame([self::COMPLETED_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
-        $this->assertSame(
-            $expectedData,
-            $this
-                ->wizard
-                ->getData()
-        );
+        $this->assertSame($expectedData, $this->data);
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
+     * @throws InvalidConfigException
      */
+    #[Test]
     #[DataProvider('forwardOnlyProvider')]
-    public function test_direction_backward(bool $forwardOnly): void
+    public function direction_backward(bool $forwardOnly): void
     {
         $steps = ['step_1', 'step_2', self::BACK_STEP, 'step_4'];
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withForwardOnly($forwardOnly)
             ->withSteps($steps)
+        ;
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::GET))
         ;
 
         do {
@@ -421,19 +354,21 @@ class WizardTest extends TestCase
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     * @throws InvalidConfigException
      */
+    #[Test]
     #[DataProvider('autoAdvanceProvider')]
-    public function test_auto_advance(bool $autoAdvance): void
+    public function auto_advance(bool $autoAdvance): void
     {
         $steps = ['step_1', self::RETURN_TO_STEP, 'step_3', 'step_4', self::AUTO_ADVANCE_STEP, 'step_6'];
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withAutoAdvance($autoAdvance)
             ->withSteps($steps)
+        ;
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::GET))
         ;
 
         do {
@@ -492,21 +427,23 @@ class WizardTest extends TestCase
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     * @throws InvalidConfigException
      */
+    #[Test]
     #[DataProvider('branchProvider')]
-    public function test_branching(array $steps, bool $defaultBranch, array $branches, array $path): void
+    public function branching(array $steps, bool $defaultBranch, array $branches, array $path): void
     {
         $expectedData = [];
 
         $this->branches = $branches;
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withDefaultBranch($defaultBranch)
             ->withSteps($steps)
+        ;
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::GET))
         ;
 
         foreach ($path as $step) {
@@ -530,19 +467,14 @@ class WizardTest extends TestCase
             ;
         }
 
-        $this->assertSame(
-            $expectedData,
-            $this
-                ->wizard
-                ->getData()
-        );
+        $this->assertSame($expectedData, $this->data);
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
+     * @throws InvalidConfigException
      */
-    public function test_direction_repeat(): void
+    #[Test]
+    public function repeat_step(): void
     {
         $steps = ['step_1', self::REPEAT_STEP, 'step_3'];
         $expectedData = [
@@ -558,9 +490,11 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withSteps($steps)
+        ;
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::GET))
         ;
 
         do {
@@ -572,21 +506,17 @@ class WizardTest extends TestCase
                 ->wizard
                 ->step(new ServerRequest(method: Method::POST))
             ;
-        } while ($result->getHeader(Header::LOCATION) === [self::STEP_ROUTE_PATTERN]);
+        } while ($result->getStatusCode() === Status::FOUND);
 
-        $this->assertSame(
-            $expectedData,
-            $this
-                ->wizard
-                ->getData()
-        );
+        $this->assertSame($expectedData, $this->data);
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     * @throws InvalidConfigException
      */
+    #[Test]
     #[DataProvider('repeatGoBackIndexProvider')]
-    public function test_direction_backward_in_repeated_steps(int $repeatGoBackIndex): void
+    public function direction_backward_in_repeated_steps(int $repeatGoBackIndex): void
     {
         $this->repeatGoBack = true;
         $this->repeatGoBackIndex = $repeatGoBackIndex;
@@ -604,8 +534,6 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withSteps($steps)
         ;
 
@@ -618,22 +546,17 @@ class WizardTest extends TestCase
                 ->wizard
                 ->step(new ServerRequest(method: Method::POST))
             ;
-        } while ($result->getHeader(Header::LOCATION) === [self::STEP_ROUTE_PATTERN]);
+        } while ($result->getStatusCode() === Status::FOUND);
 
-        $this->assertSame(
-            $expectedData,
-            $this
-                ->wizard
-                ->getData()
-        );
+        $this->assertSame($expectedData, $this->data);
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
+     * @throws InvalidConfigException
      */
+    #[Test]
     #[DataProvider('gotoProvider')]
-    public function test_goto_step(string $goto, bool $autoAdvance, bool $forwardOnly): void
+    public function goto_step(string $goto, bool $autoAdvance, bool $forwardOnly): void
     {
         $steps = [
             'step_1',
@@ -650,11 +573,13 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withAutoAdvance($autoAdvance)
             ->withForwardOnly($forwardOnly)
             ->withSteps($steps)
+        ;
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::GET))
         ;
 
         do {
@@ -741,43 +666,21 @@ class WizardTest extends TestCase
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
+     * @throws InvalidConfigException
      */
-    public function test_timeout_step_no_expired_route(): void
+    #[Test]
+    public function step_timeout(): void
     {
         $steps = ['step_1', self::TIMEOUT_STEP, 'step_3'];
 
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withStepTimeout(self::STEP_TIMEOUT)
             ->withSteps($steps)
         ;
-
-        $this->expectException(InvalidConfigException::class);
-        $this->expectExceptionMessage(strtr(Wizard::ROUTE_NOT_SET_EXCEPTION, ['{route}' => self::EXPIRED_ROUTE]));
         $this
             ->wizard
             ->step(new ServerRequest(method: Method::GET))
-        ;
-    }
-
-    /**
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
-     */
-    public function test_step_timeout(): void
-    {
-        $steps = ['step_1', self::TIMEOUT_STEP, 'step_3'];
-
-        $this->wizard = $this
-            ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withExpiredRoute(self::EXPIRED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
-            ->withStepTimeout(self::STEP_TIMEOUT)
-            ->withSteps($steps)
         ;
 
         do {
@@ -789,16 +692,18 @@ class WizardTest extends TestCase
                 ->wizard
                 ->step(new ServerRequest(method: Method::POST))
             ;
-        } while ($result->getHeader(Header::LOCATION) === [self::STEP_ROUTE_PATTERN]);
+        } while ($result->getStatusCode() === Status::FOUND);
 
-        $this->assertSame([self::EXPIRED_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
+        $this->assertSame(1, $this->events[StepExpired::class]);
+        $this->assertSame(self::TIMEOUT_STEP, $this->wizard->getCurrentStep());
     }
 
     /**
-     * @throws \BeastBytes\Wizard\Exception\InvalidConfigException
-     * @throws \BeastBytes\Wizard\Exception\RuntimeException
+     * @throws InvalidConfigException
+     * @throws \Exception
      */
-    public function test_pause_and_resume(): void
+    #[Test]
+    public function pause_and_resume(): void
     {
         $steps = ['step_1', 'step_2', self::PAUSE_STEP, 'step_4', 'step_5'];
         $expectedData = [];
@@ -808,9 +713,6 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withExpiredRoute(self::EXPIRED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withStepTimeout(self::STEP_TIMEOUT)
             ->withSteps($steps)
         ;
@@ -846,6 +748,7 @@ class WizardTest extends TestCase
         self::$session = new Session();
         $wizard = new Wizard(
             new Dispatcher($this->createProvider()),
+            new Inflector(),
             new ResponseFactory(),
             self::$session,
             $this->createUrlGenerator()
@@ -856,17 +759,21 @@ class WizardTest extends TestCase
         do {
             $wizard->step(new ServerRequest(method: Method::GET));
             $result = $wizard->step(new ServerRequest(method: Method::POST));
-        } while ($result->getHeader(Header::LOCATION) === [self::STEP_ROUTE_PATTERN]);
+        } while ($result->getStatusCode() === Status::FOUND);
 
         $this->assertSame(1, $this->events[AfterWizard::class]);
-        $this->assertSame([self::COMPLETED_ROUTE_PATTERN], $result->getHeader(Header::LOCATION));
-        $this->assertSame($expectedData, $wizard->getData());
+        $this->assertSame($expectedData, $this->data);
     }
 
-    public function test_step_parameter()
+    /**
+     * @throws InvalidConfigException
+     */
+    #[Test]
+    public function step_parameter()
     {
         $this->wizard = new Wizard(
             new Dispatcher($this->createProvider()),
+            new Inflector(),
             new ResponseFactory(),
             self::$session,
             $this->createUrlGenerator( '/wizard/{step: \w+}')
@@ -876,12 +783,12 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
-            ->withCompletedRoute(self::COMPLETED_ROUTE)
-            ->withExpiredRoute(self::EXPIRED_ROUTE)
-            ->withStepRoute(self::STEP_ROUTE)
             ->withStepParameter(self::STEP_PARAMETER)
-            ->withStepTimeout(self::STEP_TIMEOUT)
             ->withSteps($steps)
+        ;
+        $this
+            ->wizard
+            ->step(new ServerRequest(method: Method::GET))
         ;
 
         $count = 0;
@@ -895,27 +802,24 @@ class WizardTest extends TestCase
                 ->step(new ServerRequest(method: Method::POST))
             ;
 
-            if ($result->getHeader(Header::LOCATION) !== [self::COMPLETED_ROUTE_PATTERN]) {
-                if (
-                    $this
-                        ->wizard
-                        ->getCurrentStep()
-                    === self::REPEAT_STEP
-                ) {
-                    $this->assertSame(
-                        ['/wizard/' . self::REPEAT_STEP . ($count ? "_$count" : '')],
-                        $result->getHeader(Header::LOCATION)
-                    );
-                    $count++;
-                } else {
-                    $this->assertSame(
-                        ['/wizard/' . $this->wizard->getCurrentStep()],
-                        $result->getHeader(Header::LOCATION)
-                    );
-                }
+            if (str_starts_with(
+                $this
+                    ->wizard
+                    ->getCurrentStep(),
+                    self::REPEAT_STEP
+            )) {
+                $this->assertSame(
+                    ['/wizard/' . self::REPEAT_STEP . ($count ? "_$count" : '')],
+                    $result->getHeader(Header::LOCATION)
+                );
+                $count++;
+            } elseif ($result->getStatusCode() === Status::FOUND) {
+                $this->assertSame(
+                    ['/wizard/' . $this->wizard->getCurrentStep()],
+                    $result->getHeader(Header::LOCATION)
+                );
             }
-        } while ($result->getHeader(Header::LOCATION) !== [self::COMPLETED_ROUTE_PATTERN]);
-
+        } while ($result->getStatusCode() === Status::FOUND);
     }
 
     public static function autoAdvanceProvider(): Generator
@@ -1179,17 +1083,16 @@ class WizardTest extends TestCase
         );
     }
 
-    private function createUrlGenerator(string $stepRoutePattern = self::STEP_ROUTE_PATTERN): UrlGeneratorInterface {
-        $routes = [
-            Route::get(self::COMPLETED_ROUTE_PATTERN)
-                 ->name(self::COMPLETED_ROUTE),
-            Route::get(self::EXPIRED_ROUTE_PATTERN)
-                 ->name(self::EXPIRED_ROUTE),
-            Route::methods([Method::GET, Method::POST], $stepRoutePattern)
-                 ->name(self::STEP_ROUTE),
-        ];
+    private function createUrlGenerator(string $stepRoutePattern = self::URI): UrlGeneratorInterface {
+        $route = Route::methods([Method::GET, Method::POST], $stepRoutePattern)
+            ->name(self::STEP_ROUTE)
+        ;
+        $routes = [$route];
         $routeCollection = $this->createRouteCollection($routes);
-        return new UrlGenerator($routeCollection);
+        $currentRoute = new CurrentRoute();
+        $uri = (new UriFactory())->createUri(self::URI);
+        $currentRoute->setRouteWithArguments($route, ['step']);
+        return new UrlGenerator($routeCollection, $currentRoute);
     }
 
     private function createRouteCollection(array $routes): RouteCollectionInterface
@@ -1206,11 +1109,12 @@ class WizardTest extends TestCase
     public function afterWizard(AfterWizard $event): void
     {
         $this->events[AfterWizard::class]++;
+        $this->data = $event->getWizard()->getData();
+        $event->setResponse(new Response());
     }
 
     public function beforeWizard(BeforeWizard $event): void
     {
-        $event->continue($this->continue);
         $this->events[BeforeWizard::class]++;
     }
 
@@ -1222,10 +1126,10 @@ class WizardTest extends TestCase
             $step = $event->getWizard()->getCurrentStep();
             if ($step === self::REPEAT_STEP) {
                 $event->setData([
-                    'key-' . $this->index => $event->getWizard()->getCurrentStep() . '-value-' . $this->index
+                    'key-' . $this->index => $step . '-value-' . $this->index
                 ]);
             } else {
-                $event->setData(['key' => $event->getWizard()->getCurrentStep() . '-value']);
+                $event->setData(['key' => $step . '-value']);
             }
 
             switch ($step) {
@@ -1239,7 +1143,7 @@ class WizardTest extends TestCase
                     $event->setBranches($this->branches);
                     break;
                 case self::END_STEP:
-                    $event->continue(false);
+                    $event->stopWizard();
                     break;
                 case self::GOTO_STEP:
                     $event->setGoto($this->goto);
@@ -1260,15 +1164,17 @@ class WizardTest extends TestCase
                     break;
             }
         } else {
+            $event->setResponse(new Response());
             if ($this->endOnGet && $event->getWizard()->getCurrentStep() === self::END_STEP) {
-                $event->continue(false);
+                $event->stopWizard();
             }
-            $event->setData(new Response());
         }
     }
 
     public function stepExpired(StepExpired $event): void
     {
         $this->events[StepExpired::class]++;
+        $this->data = $event->getWizard()->getData();
+        $event->setResponse(new Response());
     }
 }
