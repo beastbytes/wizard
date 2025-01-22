@@ -13,18 +13,14 @@ use BeastBytes\Wizard\Event\BeforeWizard;
 use BeastBytes\Wizard\Event\Step;
 use BeastBytes\Wizard\Event\StepExpired;
 use BeastBytes\Wizard\Exception\InvalidConfigException;
-use BeastBytes\Wizard\Exception\RuntimeException;
 use Exception;
-use InvalidArgumentException;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Arrays\ArrayHelper;
 use Yiisoft\Http\Header;
-use Yiisoft\Http\Method;
 use Yiisoft\Http\Status;
-use Yiisoft\Router\CurrentRoute;
 use Yiisoft\Router\UrlGeneratorInterface;
 use Yiisoft\Session\SessionInterface;
 use Yiisoft\Strings\Inflector;
@@ -625,7 +621,7 @@ final class Wizard implements WizardInterface
                         ->inflector
                         ->toSnakeCase($this->getCurrentStep())
                     . ($repetitionIndex > 0
-                        ? '_' . (string) ($repetitionIndex + 1)
+                        ? '_' . (string) ($repetitionIndex)
                         : ''
                     )
             ];
