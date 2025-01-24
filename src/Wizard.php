@@ -42,8 +42,8 @@ final class Wizard implements WizardInterface
     public const STEP_PARAMETER = 'step';
     private const AFTER_WIZARD_EVENT_NOT_SET = 'AfterWizard event not set';
     private const AFTER_WIZARD_EVENT_NOT_SET_INFO = 'Set AfterWizard event using withEvents()';
-    private const EVENTS_NOT_SET_EXCEPTION = 'Events not set';
-    private const EVENTS_NOT_SET_EXCEPTION_INFO = 'Set the events using withEvents() method; the AfterWizard and Step event *must* be set, the StepExpired event must be set if the Wizard has a stepTimeout, the BeforeWizard event is optional';
+    private const EVENTS_NOT_SET_EXCEPTION = '"events" not set';
+    private const EVENTS_NOT_SET_EXCEPTION_INFO = 'Set "events" using withEvents() method; the AfterWizard and Step event *must* be set, the StepExpired event must be set if the Wizard has a stepTimeout, the BeforeWizard event is optional';
     private const STEP_EVENT_NOT_SET = 'Step event not set';
     private const STEP_EVENT_NOT_SET_INFO = 'Set Step event using withEvents()';
     private const STEP_EXPIRED_EVENT_NOT_SET = 'StepExpired event not set';
