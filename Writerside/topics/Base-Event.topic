@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="Base Event" id="Base-Event" help-id="Base-EventX">
+
+    <p>BaseEvent is the base class for all Wizard events.</p>
+
+    <table id="inheritance">
+        <tr>
+            <td>Namespace</td>
+            <td>BeastBytes\Wizard\Event</td>
+        </tr>
+        <tr>
+            <td>Implements</td>
+            <td>Psr\EventDispatcher\StoppableEventInterface</td>
+        </tr>
+        <tr>
+            <td>Child classes</td>
+            <td>
+                <a href="AfterWizard-Event.topic">BeastBytes\Wizard\Event\AfterWizard</a>,
+                <a href="BeforeWizard-Event.topic">BeastBytes\Wizard\Event\BeforeWizard</a>,
+                <a href="Step-Event.topic">BeastBytes\Wizard\Event\Step</a>,
+                <a href="StepExpired-Event.topic">BeastBytes\Wizard\Event\StepExpired</a>
+            </td>
+        </tr>
+    </table>
+
+    <chapter title="Methods" id="methods">
+        <table>
+            <tr>
+                <td>Name</td>
+                <td>Description</td>
+            </tr>
+            <tr id="constructsummary">
+                <td>__construct()</td>
+                <td>Event constructor</td>
+            </tr>
+            <tr id="getwizardsummary">
+                <td>getWizard()</td>
+                <td>Returns the Wizard instance that raised the event</td>
+            </tr>
+            <tr id="ispropagationstoppedsummary">
+                <td>isPropagationStopped()</td>
+                <td>Returns a value indicating whether event propagation is stopped</td>
+            </tr>
+            <tr id="iswizardstoppedsummary">
+                <td>isWizardStopped()</td>
+                <td>Returns a value indicating whether the wizard is stopped</td>
+            </tr>
+            <tr id="stoppropagationsummary">
+                <td>stopPropagation()</td>
+                <td>Stops event propagation</td>
+            </tr>
+            <tr id="stopwizardsummary">
+                <td>stopWizard()</td>
+                <td>Stops the wizard</td>
+            </tr>
+        </table>
+    </chapter>
+
+    <chapter title="Method Details" id="method-details">
+        <chapter title="__construct()" id="construct">
+            <p>Constructor.</p>
+            <code-block lang="php">
+            public function __construct(private WizardInterface $wizard)
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$wizard</td>
+                    <td>WizardInterface</td>
+                    <td>Required</td>
+                    <td>The Wizard instance that raised the event</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="getWizard()" id="getwizard">
+            <p>Returns the Wizard instance that raised the event.</p>
+            <code-block lang="php">
+            public function getWizard(): WizardInterface
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>WizardInterface</td>
+                    <td>The Wizard instance that raised the event</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="isPropagationStopped()" id="ispropagationstopped">
+            <p>Returns a value indicating whether event propagation is stopped.</p>
+            <p>See also: <a href="Base-Event.topic" anchor="stoppropagation">stopPropagation()</a></p>
+            <code-block lang="php">
+            public function isPropagationStopped(): bool
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>bool</td>
+                    <td>
+                        Whether event propagation is stopped<br/>
+                        <i>false</i>: if event propagation is not stopped<br/>
+                        <i>true</i>: if event propagation is stopped
+                    </td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="isWizardStopped()" id="iswizardstopped">
+            <p>Returns a value indicating whether the Wizard is stopped</p>
+            <p>See also: <a href="Base-Event.topic" anchor="stopwizard">stopWizard()</a></p>
+            <code-block lang="php">
+            public function isWizardStopped(): bool
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>bool</td>
+                    <td>
+                        Whether the Wizard is stopped<br/>
+                        <i>false</i>: if the Wizard is not stopped<br/>
+                        <i>true</i>: if the Wizard is stopped
+                    </td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="stopPropagation()" id="stoppropagation">
+            <p>Stops event propagation.</p>
+            <p>See also: <a href="Base-Event.topic" anchor="ispropagationstopped">isPropagationStopped()</a></p>
+            <code-block lang="php">
+            public function stopPropagation(): void
+            </code-block>
+        </chapter>
+
+        <chapter title="stopWizard()" id="stopwizard">
+            <p>Stops the Wizard.</p>
+            <p>See also: <a href="Base-Event.topic" anchor="iswizardstopped">isWizardStopped()</a></p>
+            <code-block lang="php">
+            public function stopWizard(): void
+            </code-block>
+        </chapter>
+    </chapter>
+</topic>

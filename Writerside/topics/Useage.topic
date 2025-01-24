@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="Useage" id="Useage">
+    <p>Wizard is used in a Controller. A single action provides access to the wizard from the application;
+        all forms used by the wizard submit to the URL for this action.</p>
+
+    <code-block lang="php">
+class MyController
+{
+    private const WIZARD_STEPS = ['step_1', 'step_2', 'step_3'];
+
+    public function wizard(
+            ServerRequestInterface $request,
+            WizardInterface $wizard
+    ): ResponseInterface
+    {
+        return $wizard
+                -&gt;withId(self::class)
+                -&gt;withForwardOnly(Wizard::FORWARD_ONLY)
+                -&gt;withSteps(self::WIZARD_STEPS)
+                -&gt;step($request)
+        ;
+    }
+}
+</code-block>
+    <p>The above example does the following:</p>
+    <list>
+        <li>Declares the steps WIZARD_STEPS. There can be as many steps as needed and this array also
+            defines branch options when Plot Branching Navigation (PBN) is used (more on PBN later).
+        </li>
+        <li>Declares an action (the <code>wizard()</code> method in this example). Like any other action,
+            it's route must be defined in the router.
+        </li>
+        <li>The action sets the Wizard options then calls <code>Wizard::step()</code> with the request.</li>
+    </list>
+    <chapter title="Events" id="events">
+        <p>Wizard uses events to manage which step is being processed, displaying forms,
+            collecting and providing collected data.</p>
+        <p>The event handlers are typically declared in the controller and - like any other event - the events and their
+            handlers must be configured in the application config.</p>
+        <p>The events raised by Wizard, and a brief summary of each, are:</p>
+        <chapter title="BeforeWizard" id="beforewizard">
+            <p>Raised the first time <code>Wizard::step()</code> is called.</p>
+            <p>To prevent the Wizard from running, call <code>BeforeWizard::stopWizard()</code> in the event handler.</p>
+            <p>Handling the BeforeWizard event is optional.</p>
+        </chapter>
+        <chapter title="Step" id="step">
+            <p>The Step event is raised at least twice for every step in the Wizard.</p>
+            <p>The first time it is raised in a step the event handler renders a form.
+                The event is raised again on form submission.</p>
+            <p>The Step event <i>must</i> be handled.</p>
+        </chapter>
+        <chapter title="StepExpired" id="stepexpired">
+            <p>If the Wizard is configured with a step timeout, the StepExpired event is raised if a step times out.</p>
+            <p>The StepExpired event <i>must</i> be handled if a step timeout is set.</p>
+        </chapter>
+        <chapter title="AfterWizard" id="afterwizard">
+            <p>The AfterWizard is raised when the Wizard stops.
+                This may be because the Wizard has completed or an event handler has stopped the Wizard.</p>
+            <p>The AfterWizard event <i>must</i> be handled.</p>
+        </chapter>
+    </chapter>
+</topic>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="Event" id="Event">
+
+    <p>This section gives details of the events raised by Wizard:</p>
+    <list>
+        <li><a href="AfterWizard-Event.topic">AfterWizard event</a></li>
+        <li><a href="BeforeWizard-Event.topic">BeforeWizard event</a></li>
+        <li><a href="Step-Event.topic">Step event</a></li>
+        <li><a href="StepExpired-Event.topic">StepExpired event</a></li>
+    </list>
+    <p>and the classes that the events inherit from and use:</p>
+    <list>
+        <li><a href="Base-Event.topic">BaseEvent</a></li>
+        <li><a href="ResponseTrait.topic">ResponseTrait</a></li>
+    </list>
+</topic>

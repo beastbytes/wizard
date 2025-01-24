@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE instance-profile
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/product-profile.dtd">
+
+<instance-profile id="w"
+                 name="Wizard"
+                 start-page="About-Wizard.topic">
+
+    <toc-element topic="About-Wizard.topic"/>
+    <toc-element topic="Useage.topic"/>
+    <toc-element topic="API.md">
+        <toc-element topic="Wizard.topic"/>
+        <toc-element topic="Event.topic">
+            <toc-element topic="BeforeWizard-Event.topic"/>
+            <toc-element topic="AfterWizard-Event.topic"/>
+            <toc-element topic="Base-Event.topic"/>
+            <toc-element topic="ResponseTrait.topic"/>
+            <toc-element topic="Step-Event.topic"/>
+            <toc-element topic="StepExpired-Event.topic"/>
+        </toc-element>
+    </toc-element>
+</instance-profile>

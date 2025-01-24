@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="About Wizard" id="About-Wizard">
+
+    <p>Wizard simplifies the handling of multistep forms.</p>
+    <chapter title="Features" id="features">
+        <list>
+            <li>All forms submit to the same URL</li>
+            <li>Next/Previous or Forward Only navigation</li>
+            <li>Looping - repeat one or more steps as many times as needed</li>
+            <li>Plot Branching Navigation (PBN) - decide which path to take depending on the user's response</li>
+            <li>Step Timeout - steps can have a timeout to ensure a user responds within a given time</li>
+            <li>Save/Restore - save partially completed forms; restore and continue from that point</li>
+            <li>Event driven - write the handler functions and hook them up to events</li>
+        </list>
+    </chapter>
+    <chapter title="Installation" id="installation">
+        <p>Install Wizard using <a href="https://getcomposer.org/">Composer</a></p>
+        <p>Add the following to the <i>require</i> section of your composer.json:</p>
+
+        <code-block lang="json">
+          &quot;beastbytes/wizard&quot;: &quot;*&quot;,
+        </code-block>
+        <p>or run <code>php composer . phar require -dev &quot;beastbytes/wizard:*&quot;</code></p>
+    </chapter>
+
+</topic>

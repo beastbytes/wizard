@@ -1,0 +1,451 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="Wizard" id="Wizard" help-id="Wizard">
+
+    <p>Wizard is the class that manages multistep forms.</p>
+    <p>It should be injected into the controller or action.</p>
+
+    <table>
+        <tr>
+            <td>Namespace</td>
+            <td>BeastBytes\Wizard</td>
+        </tr>
+    </table>
+
+    <chapter title="Methods" id="methods">
+        <table>
+            <tr>
+                <td>Name</td>
+                <td>Description</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#getcurrentstep">getCurrentStep()</a></td>
+                <td>Returns the name of the current step</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#getdata">getData()</a></td>
+                <td>Returns data for a step or all processed steps</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#getsteps">getSteps()</a></td>
+                <td>Returns a list of steps that have been and are to be processed</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#pause">pause()</a></td>
+                <td>Returns a string - serialision of the Wizard instance - that can be used
+                    with Wizard::resume()</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#resume">resume()</a></td>
+                <td>Resumes a Wizard instance</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#reset">reset()</a></td>
+                <td>Resets the Wizard instance</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#step">step()</a></td>
+                <td>Processes a Wizard step</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#withautoadvance">withAutoAdvance()</a></td>
+                <td>Whether the Wizard moves to the first unprocessed step or the next step in the steps array</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#withdefaultbranch">withDefaultBranch()</a></td>
+                <td>Whether the default (first) branch in a group is used by default or the group is skipped</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#withevents">withId()</a></td>
+                <td>Sets the events and their handlers for the Wizard instance</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#withforwardonly">withForwardOnly()</a></td>
+                <td>Sets whether Wizard must move to the next valid step or can return to an earlier step</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#withsessionkey">withSessionKey()</a></td>
+                <td>Sets the session key for the Wizard instance</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#withsteps">withSteps()</a></td>
+                <td>Sets the steps for the Wizard</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#withstepparameter">withStepParameter()</a></td>
+                <td>Sets the step parameter as defined in the Route</td>
+            </tr>
+            <tr>
+                <td><a href="Wizard.topic#withsteptimeout">withStepTimeout()</a></td>
+                <td>Sets the step timeout in seconds</td>
+            </tr>
+        </table>
+    </chapter>
+
+    <chapter title="Method Details" id="method-details">
+        <chapter title="getCurrentStep()" id="getcurrentstep">
+            <p>Returns the name of the current step.</p>
+            <code-block lang="php">
+            public function getCurrentStep(): string
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>string</td>
+                    <td>The name of the current step</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="getData()" id="getdata">
+            <p>Returns data for a step or all processed steps.</p>
+            <code-block lang="php">
+            public function getData(?string $step = null): mixed
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$step</td>
+                    <td>?string</td>
+                    <td>null</td>
+                    <td>The name of the step</td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>mixed</td>
+                    <td>Stored data for the specified step, or a map containing data for all processed steps
+                        indexed by step name
+                    </td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="getSteps()" id="getsteps">
+            <p>Returns a list of steps that have been and are to be processed.</p>
+            <p>The list may change as steps are processed due to Plot Branching.</p>
+            <p>See also: <a href="Wizard.topic#withsteps">Wizard::withSteps()</a></p>
+            <code-block lang="php">
+            public function getSteps(): array
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>array</td>
+                    <td>List of steps</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="pause()" id="pause">
+            <p>Returns a string - serialision of the Wizard instance - that can be used with Wizard::resume().</p>
+            <p>See also: <a href="Wizard.topic#resume">Wizard::resume()</a></p>
+            <code-block lang="php">
+            public function pause(): string
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>string</td>
+                    <td>Serialised Wizard data</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="resume()" id="resume">
+            <p>Resumes a Wizard instance.</p>
+            <p>See also: <a href="Wizard.topic#pause">Wizard::pause()</a></p>
+            <code-block lang="php">
+            public function resume(string $data): void
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$data</td>
+                    <td>string</td>
+                    <td>Required</td>
+                    <td>The serialised Wizard data from Wizard::pause().</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="reset()" id="reset">
+            <p>Resets the Wizard instance.</p>
+            <p>All Session and step data are cleared, and Wizard options set to default values.</p>
+            <code-block lang="php">
+            public function reset(): void
+            </code-block>
+        </chapter>
+
+        <chapter title="step()" id="step">
+            <p>Processes a Wizard step.</p>
+            <code-block lang="php">
+            public function step(ServerRequestInterface $request): ?ResponseInterface
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>ResponseInterface</td>
+                    <td>The response</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="withAutoAdvance()" id="withautoadvance">
+            <p>Whether the Wizard moves to the first unprocessed step or the next step in the steps array.</p>
+            <p>Given the steps array: <code>['step1', 'step2', 'step3', 'step4']</code>,
+            if '<i>step1</i>', '<i>step2</i>', and '<i>step3</i>' have been processed,
+            and the user has returned to '<i>step2</i>'</p>
+            <p>If <code>$autoAdvance === true</code> the next step will be '<i>step4</i>'.</p>
+            <p>If <code>$autoAdvance === false</code> the next step will be '<i>step3</i>'.</p>
+            <code-block lang="php">
+            public function withAutoAdvance(bool $autoAdvance): self
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$autoAdvance</td>
+                    <td>bool</td>
+                    <td>true</td>
+                    <td>
+                        Whether Wizard moves to the first unprocessed step or the next step<br/>
+                        <i>true</i>: The Wizard moves to the first unprocessed step in the steps array<br/>
+                        <i>false</i>: The Wizard moves to the next step in the steps array
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>Wizard (new instance)</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="withDefaultBranch()" id="withdefaultbranch">
+            <p>Whether the default (first) branch in a group is used by default or the group is skipped.</p>
+            <code-block lang="php">
+            public function withDefaultBranch(bool $defaultBranch): self
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$defaultBranch</td>
+                    <td>bool</td>
+                    <td>true</td>
+                    <td>
+                        Whether the default (first) branch in a group is used by default or the group is skipped<br/>
+                        <i>true</i>: The default (first) branch in a group is used<br/>
+                        <i>false</i>: The group is skipped
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>Wizard (new instance)</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="withEvents()" id="withevents">
+            <p>Sets the events for the Wizard instance.</p>
+            <p>The AfterWizard and Step events <b>must</b> be defined.</p>
+            <p>The StepExpired event <b>must</b> be defined if a step timeout is set.</p>
+            <p>The BeforeWizard event is optional.</p>
+            <p>If a step timeout is used, this method <b>must</b> be called after <code>Wizard::withStepTimeout()</code></p>
+            <p>See also: <a href="Wizard.topic#withsteptimeout">Wizard::withStepTimeout()</a></p>
+            <code-block lang="php">
+            public function withId(string $id): self
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$events</td>
+                    <td>array</td>
+                    <td>Required</td>
+                    <td>Map of events for the Wizard instance.<br/>
+                    Keys are the event FQCN, values are callables defining the event handler
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>Wizard (new instance)</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="withForwardOnly()" id="withforwardonly">
+            <p>Sets whether Wizard must move to the next valid step or can return to an earlier step.</p>
+            <code-block lang="php">
+            public function withForwardOnly(bool $forwardOnly): self
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$forwardOnly</td>
+                    <td>bool</td>
+                    <td>true</td>
+                    <td>Whether Wizard must move to the next valid step or can return to an earlier step.<br/>
+                        true: Wizard must move to the next valid step<br/>
+                        false: Wizard can return to an earlier step
+                    </td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>Wizard (new instance)</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="withSessionKey()" id="withsessionkey">
+            <p>Sets the session key for the Wizard instance.</p>
+            <code-block lang="php">
+            public function withSessionKey(string $sessionKey): self
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$sessionKey</td>
+                    <td>string</td>
+                    <td>'__wizard'</td>
+                    <td>Set the session key for the Wizard instance</td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>Wizard (new instance)</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="withSteps()" id="withsteps">
+            <p>Sets the steps for the Wizard.</p>
+            <code-block lang="php">
+            public function withSteps(array $steps): self
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$steps</td>
+                    <td>array</td>
+                    <td>Required</td>
+                    <td>The steps to process</td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>Wizard (new instance)</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="withStepParameter()" id="withstepparameter">
+            <p>Sets the step parameter as defined in the Route.</p>
+            <p>The step parameter is replaced with the step name in the URI.
+                It provides a visual representation in the URI of the Wizard's progress; it has no other purpose.</p>
+            <code-block lang="php">
+            public function withStepParameter(string $stepParameter): self
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$stepParameter</td>
+                    <td>string</td>
+                    <td>''</td>
+                    <td>Name of the step parameter in route definition.</td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>Wizard (new instance)</td>
+                </tr>
+            </table>
+        </chapter>
+
+        <chapter title="withStepTimeout()" id="withsteptimeout">
+            <p>Sets the step timeout in seconds.</p>
+            <p>If a step is not processed within the step timeout period a StepExpired event is raised.</p>
+            <p>If used, this method <b>must</b> be called before <code>Wizard::withEvents()</code></p>
+            <code-block lang="php">
+            public function withStepTimeout(int $stepTimeout): self
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$stepParameter</td>
+                    <td>int</td>
+                    <td>0</td>
+                    <td>Step timeout in seconds</td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>Wizard (new instance)</td>
+                </tr>
+            </table>
+        </chapter>
+    </chapter>
+</topic>

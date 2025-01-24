@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="Step Event" id="Step-Event" help-id="Step-Event">
+
+    <p>The Step event is raised when the Wizard processes a step.</p>
+    <p>The event is raised at least twice for each step processed:</p>
+    <list>
+        <li>When the form is first rendered; request method is GET</li>
+        <li>When the form is submitted; request method is POST</li>
+    </list>
+    <p>It the form contains errors the event is raised again on subsequent form submissions.</p>
+
+    <include from="AfterWizard-Event.topic" element-id="inheritance"></include>
+
+    <chapter title="Methods" id="methods">
+        <table>
+            <tr>
+                <td>Name</td>
+                <td>Description</td>
+            </tr>
+            <include from="Base-Event.topic" element-id="constructsummary"></include>
+            <include from="ResponseTrait.topic" element-id="getresponsesummary"></include>
+            <include from="Base-Event.topic" element-id="getwizardsummary"></include>
+            <include from="Base-Event.topic" element-id="ispropagationstoppedsummary"></include>
+            <include from="Base-Event.topic" element-id="iswizardstoppedsummary"></include>
+            <include from="ResponseTrait.topic" element-id="setresponsesummary"></include>
+            <include from="Base-Event.topic" element-id="stoppropagationsummary"></include>
+            <include from="Base-Event.topic" element-id="stopwizardsummary"></include>
+        </table>
+    </chapter>
+
+    <chapter title="Method Details" id="method-details">
+        <include from="Base-Event.topic" element-id="construct"></include>
+        <include from="ResponseTrait.topic" element-id="getresponse"></include>
+        <include from="Base-Event.topic" element-id="getwizard"></include>
+        <include from="Base-Event.topic" element-id="ispropagationstopped"></include>
+        <include from="Base-Event.topic" element-id="iswizardstopped"></include>
+        <include from="ResponseTrait.topic" element-id="setresponse"></include>
+        <include from="Base-Event.topic" element-id="stoppropagation"></include>
+        <include from="Base-Event.topic" element-id="stopwizard"></include>
+    </chapter>
+</topic>

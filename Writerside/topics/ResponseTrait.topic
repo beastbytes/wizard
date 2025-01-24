@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="ResponseTrait" id="ResponseTrait">
+
+    <p>ResponseTrait provides methods that allow events to set and get the response.</p>
+
+    <table id="inheritance">
+        <tr>
+            <td>Namespace</td>
+            <td>BeastBytes\Wizard\Event</td>
+        </tr>
+        <tr>
+            <td>Used by</td>
+            <td>
+                <a href="AfterWizard-Event.topic">BeastBytes\Wizard\Event\AfterWizard</a>,
+                <a href="Step-Event.topic">BeastBytes\Wizard\Event\Step</a>,
+                <a href="StepExpired-Event.topic">BeastBytes\Wizard\Event\StepExpired</a>
+            </td>
+        </tr>
+    </table>
+
+    <chapter title="Methods" id="methods">
+        <table>
+            <tr>
+                <td>Name</td>
+                <td>Description</td>
+            </tr>
+            <tr id="getresponsesummary">
+                <td>getResponse()</td>
+                <td>Returns the response</td>
+            </tr>
+            <tr id="setresponsesummary">
+                <td>setResponse()</td>
+                <td>Sets the response</td>
+            </tr>
+        </table>
+    </chapter>
+
+    <chapter title="Method Details" id="method-details">
+        <chapter title="getResponse()" id="getresponse">
+            <code-block lang="php">
+            public function getResponse(): ?ResponseInterface
+            </code-block>
+            <p>Returns the response.</p>
+            <p>See also: <a href="ResponseTrait.topic#setresponse">setResponse()</a></p>
+        </chapter>
+
+        <chapter title="setResponse()" id="setresponse">
+            <code-block lang="php">
+            public function setResponse(ResponseInterface $response): self
+            </code-block>
+            <p>Sets the response.</p>
+            <p>See also: <a href="ResponseTrait.topic#getresponse">getResponse()</a></p>
+        </chapter>
+    </chapter>
+</topic>
