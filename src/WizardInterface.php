@@ -15,8 +15,8 @@ interface WizardInterface
 {
     public function getCurrentStep(): ?string;
     public function getData(string $step = null): mixed;
-    public function getId(): string;
     public function getSteps(): array;
     public function reset(): void;
     public function step(ServerRequestInterface $request): ?ResponseInterface;
+    public function withSteps(array $steps): self;
 }

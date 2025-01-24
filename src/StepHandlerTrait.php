@@ -12,8 +12,7 @@ use BeastBytes\Wizard\Event\Step as StepEvent;
 
 /*
  * Use this trait when:
- * * the wizard id has been set to the FQCN of the class using the trait
- * * the step handler methods are in the class using the wizard
+ * * the step handler methods are in the class using this trait
  * * the step handler method names are the same as the step names
  */
 trait StepHandlerTrait
@@ -21,16 +20,14 @@ trait StepHandlerTrait
     /* Step event handler */
     public function stepHandler(StepEvent $event): void
     {
-        if ($event->getWizard()->getId() === self::class) {
-            $step = $event
-                ->getWizard()
-                ->getCurrentStep()
-            ;
+        $step = $event
+            ->getWizard()
+            ->getCurrentStep()
+        ;
 
-            if (method_exists($this, $step)) {
-                $this->$step($event);
-                $event->stopPropagation();
-            }
+        if (method_exists($this, $step)) {
+            $this->$step($event);
+            $event->stopPropagation();
         }
     }
 }

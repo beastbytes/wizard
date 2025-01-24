@@ -13,12 +13,16 @@ use BeastBytes\Wizard\Event\BeforeWizard;
 use BeastBytes\Wizard\Event\Step;
 use BeastBytes\Wizard\Event\StepExpired;
 use BeastBytes\Wizard\Exception\InvalidConfigException;
+use BeastBytes\Wizard\Exception\RuntimeException;
 use Exception;
 use Psr\EventDispatcher\EventDispatcherInterface;
 use Psr\Http\Message\ResponseFactoryInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Yiisoft\Arrays\ArrayHelper;
+use Yiisoft\EventDispatcher\Provider\ListenerCollection;
+use Yiisoft\EventDispatcher\Dispatcher\Dispatcher;
+use Yiisoft\EventDispatcher\Provider\Provider;
 use Yiisoft\Http\Header;
 use Yiisoft\Http\Status;
 use Yiisoft\Router\UrlGeneratorInterface;
@@ -36,10 +40,14 @@ final class Wizard implements WizardInterface
     public const DEFAULT_BRANCH = true;
     public const FORWARD_ONLY = true;
     public const STEP_PARAMETER = 'step';
-    private const EVENT_NOT_SET_EXCEPTION = 'Step event not set';
-    private const EVENT_NOT_SET_EXCEPTION_INFO = 'Set the event using withStepEvent() method. The parameter is the FQCN of the event which must extend BeastBytes\Wizard\Event\Step';
-    private const INVALID_STEP_EVENT = 'Invalid step event class';
-    private const INVALID_STEP_EVENT_INFO = 'The step event class must extend BeastBytes\Wizard\Event\Step';
+    private const AFTER_WIZARD_EVENT_NOT_SET = 'AfterWizard event not set';
+    private const AFTER_WIZARD_EVENT_NOT_SET_INFO = 'Set AfterWizard event using withEvents()';
+    private const EVENTS_NOT_SET_EXCEPTION = 'Events not set';
+    private const EVENTS_NOT_SET_EXCEPTION_INFO = 'Set the events using withEvents() method; the AfterWizard and Step event *must* be set, the StepExpired event must be set if the Wizard has a stepTimeout, the BeforeWizard event is optional';
+    private const STEP_EVENT_NOT_SET = 'Step event not set';
+    private const STEP_EVENT_NOT_SET_INFO = 'Set Step event using withEvents()';
+    private const STEP_EXPIRED_EVENT_NOT_SET = 'StepExpired event not set';
+    private const STEP_EXPIRED_EVENT_NOT_SET_INFO = 'Set StepExpired event using withEvents()';
     private const STEPS_NOT_SET_EXCEPTION = '"steps" not set';
     private const STEPS_NOT_SET_EXCEPTION_INFO= 'Set "steps" using withSteps() method';
     private const BRANCH_KEY = 'branch';
@@ -74,11 +82,11 @@ final class Wizard implements WizardInterface
      * @var bool If TRUE the first "non-skipped" branch in a group will be used if a branch has not been specifically selected.
      */
     private bool $defaultBranch = self::DEFAULT_BRANCH;
+    private ?EventDispatcherInterface $dispatcher = null;
     /**
      * @var bool If TRUE previously completed steps can not be reprocessed.
      */
     private bool $forwardOnly = !self::FORWARD_ONLY;
-    private string $id = '';
     /**
      * Used during pause() and resume()
      */
@@ -97,7 +105,6 @@ final class Wizard implements WizardInterface
     private string $stepTimeoutKey = '';
 
     public function __construct(
-        private EventDispatcherInterface $eventDispatcher,
         private Inflector $inflector,
         private ResponseFactoryInterface $responseFactory,
         private SessionInterface $session,
@@ -133,7 +140,7 @@ final class Wizard implements WizardInterface
 
         // The event handler will either render a form or handle data submitted from the form
         $this
-            ->eventDispatcher
+            ->dispatcher
             ->dispatch($event)
         ;
 
@@ -153,7 +160,7 @@ final class Wizard implements WizardInterface
                 $event = new StepExpired($this);
 
                 $this
-                    ->eventDispatcher
+                    ->dispatcher
                     ->dispatch($event)
                 ;
 
@@ -204,13 +211,6 @@ final class Wizard implements WizardInterface
         return $new;
     }
 
-    public function withForwardOnly(bool $forwardOnly): self
-    {
-        $new = clone $this;
-        $new->forwardOnly = $forwardOnly;
-        return $new;
-    }
-
     public function withDefaultBranch(bool $defaultBranch): self
     {
         $new = clone $this;
@@ -218,10 +218,46 @@ final class Wizard implements WizardInterface
         return $new;
     }
 
-    public function withId(string $id): self
+    public function withEvents(array $events): self
+    {
+        if (!array_key_exists(Step::class, $events)) {
+            throw new InvalidConfigException(
+                self::STEP_EVENT_NOT_SET,
+                self::STEP_EVENT_NOT_SET_INFO
+            );
+        }
+        if (!array_key_exists(AfterWizard::class, $events)) {
+            throw new InvalidConfigException(
+                self::AFTER_WIZARD_EVENT_NOT_SET,
+                self::AFTER_WIZARD_EVENT_NOT_SET_INFO
+            );
+        }
+        if ($this->stepTimeout !== self::NO_STEP_TIMEOUT && !array_key_exists(StepExpired::class, $events)) {
+            throw new InvalidConfigException(
+                self::STEP_EXPIRED_EVENT_NOT_SET,
+                self::STEP_EXPIRED_EVENT_NOT_SET_INFO
+            );
+        }
+
+        $new = clone $this;
+
+        $listeners = new ListenerCollection();
+
+        foreach ($events as $name => $listener) {
+            $listeners = $listeners->add($listener, $name);
+        }
+
+        $new->dispatcher = new Dispatcher(
+            new Provider($listeners)
+        );
+
+        return $new;
+    }
+
+    public function withForwardOnly(bool $forwardOnly): self
     {
         $new = clone $this;
-        $new->id = $id;
+        $new->forwardOnly = $forwardOnly;
         return $new;
     }
 
@@ -247,9 +283,17 @@ final class Wizard implements WizardInterface
         return $new;
     }
 
+    /**
+     * @throws RuntimeException
+     */
     public function withStepTimeout(int $stepTimeout): self
     {
         $new = clone $this;
+
+        if ($this->dispatcher !== null) {
+            throw new RuntimeException('withStepTimeout() can not be used after withEvents().');
+        }
+
         $new->stepTimeout = $stepTimeout;
         return $new;
     }
@@ -299,11 +343,6 @@ final class Wizard implements WizardInterface
         }
 
         return $data[$step] ?? null;
-    }
-
-    public function getId(): string
-    {
-        return $this->id;
     }
 
     /**
@@ -453,8 +492,8 @@ final class Wizard implements WizardInterface
      * The next step is determined by Step::goto, valid values
      * are:
      * - Wizard::DIRECTION_FORWARD (default) - moves to the next step.
-     * If autoAdvance == TRUE this will be the expectedStep,
-     * if autoAdvance == FALSE this will be the next step in the steps array
+     * If autoAdvance === TRUE this will be the expectedStep,
+     * if autoAdvance === FALSE this will be the next step in the steps array
      * - Wizard::DIRECTION_BACKWARD - moves to the previous step (which may be an earlier repeated step).
      * If Wizard::forwardOnly === TRUE this results in an invalid step
      *
@@ -697,9 +736,16 @@ final class Wizard implements WizardInterface
             );
         }
 
+        if ($this->dispatcher === null) {
+            throw new InvalidConfigException(
+                self::EVENTS_NOT_SET_EXCEPTION,
+                self::EVENTS_NOT_SET_EXCEPTION_INFO
+            );
+        }
+
         $event = new BeforeWizard($this);
         $this
-            ->eventDispatcher
+            ->dispatcher
             ->dispatch($event)
         ;
 
@@ -750,7 +796,7 @@ final class Wizard implements WizardInterface
     {
         $event = new AfterWizard($this);
         $this
-            ->eventDispatcher
+            ->dispatcher
             ->dispatch($event)
         ;
 
