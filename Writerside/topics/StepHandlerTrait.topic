@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="StepHandlerTrait" id="StepHandlerTrait">
+
+    <p>StepHandlerTrait provides a Step event handler that calls a method with the same name as the current step.</p>
+
+    <table>
+        <tr>
+            <td>Namespace</td>
+            <td>BeastBytes\Wizard\Event</td>
+        </tr>
+    </table>
+
+    <chapter title="Methods" id="methods">
+        <table>
+            <tr>
+                <td>Name</td>
+                <td>Description</td>
+            </tr>
+            <tr>
+                <td><a href="StepHandlerTrait.topic#stephandler">stepHandler()</a></td>
+                <td>Step event handler</td>
+            </tr>
+        </table>
+    </chapter>
+
+    <chapter title="Methods" id="method-details">
+        <chapter title="stepHandler()" id="stephandler">
+            <code-block lang="php">
+            public function stepHandler(Step $event): void
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$event</td>
+                    <td>Step</td>
+                    <td>Required</td>
+                    <td>The Step event</td>
+                </tr>
+            </table>
+        </chapter>
+    </chapter>
+</topic>

@@ -59,7 +59,7 @@
                 <td>Whether the default (first) branch in a group is used by default or the group is skipped</td>
             </tr>
             <tr>
-                <td><a href="Wizard.topic#withevents">withId()</a></td>
+                <td><a href="Wizard.topic#withevents">withEvents()</a></td>
                 <td>Sets the events and their handlers for the Wizard instance</td>
             </tr>
             <tr>
@@ -133,7 +133,10 @@
         <chapter title="getSteps()" id="getsteps">
             <p>Returns a list of steps that have been and are to be processed.</p>
             <p>The list may change as steps are processed due to Plot Branching.</p>
-            <p>See also: <a href="Wizard.topic#withsteps">Wizard::withSteps()</a></p>
+            <p>See also:</p>
+            <list>
+                <li><a href="Wizard.topic#withsteps">Wizard::withSteps()</a></li>
+            </list>
             <code-block lang="php">
             public function getSteps(): array
             </code-block>
@@ -148,7 +151,10 @@
 
         <chapter title="pause()" id="pause">
             <p>Returns a string - serialision of the Wizard instance - that can be used with Wizard::resume().</p>
-            <p>See also: <a href="Wizard.topic#resume">Wizard::resume()</a></p>
+            <p>See also:</p>
+            <list>
+                <li><a href="Wizard.topic#resume">Wizard::resume()</a></li>
+            </list>
             <code-block lang="php">
             public function pause(): string
             </code-block>
@@ -163,7 +169,10 @@
 
         <chapter title="resume()" id="resume">
             <p>Resumes a Wizard instance.</p>
-            <p>See also: <a href="Wizard.topic#pause">Wizard::pause()</a></p>
+            <p>See also:</p>
+            <list>
+                <li><a href="Wizard.topic#pause">Wizard::pause()</a></li>
+            </list>
             <code-block lang="php">
             public function resume(string $data): void
             </code-block>
@@ -198,9 +207,23 @@
             </code-block>
             <table>
                 <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$request</td>
+                    <td>ServerRequestInterface</td>
+                    <td>Required</td>
+                    <td>The HTTP request</td>
+                </tr>
+            </table>
+            <table>
+                <tr>
                     <td>Return</td>
                     <td>ResponseInterface</td>
-                    <td>The response</td>
+                    <td>The HTTP response</td>
                 </tr>
             </table>
         </chapter>
@@ -277,10 +300,15 @@
             <p>The AfterWizard and Step events <b>must</b> be defined.</p>
             <p>The StepExpired event <b>must</b> be defined if a step timeout is set.</p>
             <p>The BeforeWizard event is optional.</p>
-            <p>If a step timeout is used, this method <b>must</b> be called after <code>Wizard::withStepTimeout()</code></p>
-            <p>See also: <a href="Wizard.topic#withsteptimeout">Wizard::withStepTimeout()</a></p>
+            <note>This method <b>must</b> called after Wizard::resume()</note>
+            <note>If a step timeout is used, this method <b>must</b> be called after <code>Wizard::withStepTimeout()</code></note>
+            <p>See also:</p>
+            <list>
+                <li><a href="Wizard.topic#resume">Wizard::resume()</a></li>
+                <li><a href="Wizard.topic#withsteptimeout">Wizard::withStepTimeout()</a></li>
+            </list>
             <code-block lang="php">
-            public function withId(string $id): self
+            public function withEvents(array $events): self
             </code-block>
             <table>
                 <tr>
@@ -291,10 +319,10 @@
                 </tr>
                 <tr>
                     <td>$events</td>
-                    <td>array</td>
+                    <td>non-empty-array[string, callable]</td>
                     <td>Required</td>
                     <td>Map of events for the Wizard instance.<br/>
-                    Keys are the event FQCN, values are callables defining the event handler
+                    Keys are the event FQCN, values are callables defining the event handler.
                     </td>
                 </tr>
             </table>
@@ -423,6 +451,10 @@
             <p>Sets the step timeout in seconds.</p>
             <p>If a step is not processed within the step timeout period a StepExpired event is raised.</p>
             <p>If used, this method <b>must</b> be called before <code>Wizard::withEvents()</code></p>
+            <p>See also:</p>
+            <list>
+                <li><a href="Wizard.topic#withevents">Wizard::withEvents()</a></li>
+            </list>
             <code-block lang="php">
             public function withStepTimeout(int $stepTimeout): self
             </code-block>

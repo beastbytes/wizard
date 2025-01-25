@@ -62,7 +62,7 @@
 
     <chapter title="Method Details" id="method-details">
         <chapter title="__construct()" id="construct">
-            <p>Constructor.</p>
+            <p>Constructor</p>
             <code-block lang="php">
             public function __construct(private WizardInterface $wizard)
             </code-block>
@@ -98,7 +98,10 @@
 
         <chapter title="isPropagationStopped()" id="ispropagationstopped">
             <p>Returns a value indicating whether event propagation is stopped.</p>
-            <p>See also: <a href="Base-Event.topic" anchor="stoppropagation">stopPropagation()</a></p>
+            <p>See also:</p>
+            <list>
+                <li><a href="Base-Event.topic" anchor="stoppropagation">stopPropagation()</a></li>
+            </list>
             <code-block lang="php">
             public function isPropagationStopped(): bool
             </code-block>
@@ -117,7 +120,10 @@
 
         <chapter title="isWizardStopped()" id="iswizardstopped">
             <p>Returns a value indicating whether the Wizard is stopped</p>
-            <p>See also: <a href="Base-Event.topic" anchor="stopwizard">stopWizard()</a></p>
+            <p>See also:</p>
+            <list>
+                <li><a href="Base-Event.topic" anchor="stopwizard">stopWizard()</a></li>
+            </list>
             <code-block lang="php">
             public function isWizardStopped(): bool
             </code-block>
@@ -144,7 +150,10 @@
 
         <chapter title="stopWizard()" id="stopwizard">
             <p>Stops the Wizard.</p>
-            <p>See also: <a href="Base-Event.topic" anchor="iswizardstopped">isWizardStopped()</a></p>
+            <p>See also:</p>
+            <list>
+                <li><a href="Base-Event.topic" anchor="iswizardstopped">isWizardStopped()</a></li>
+            </list>
             <code-block lang="php">
             public function stopWizard(): void
             </code-block>
