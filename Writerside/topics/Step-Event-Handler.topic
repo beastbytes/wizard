@@ -6,15 +6,33 @@
        title="Step Event Handler" id="Step-Event-Handler">
 
     <p>The Step event handler is responsible for rendering the form a step and for validating the form on submission.
-        Because all steps use the Step event handler, it is best to call step specific methods to do this
-        for individual steps; the <a href="StepHandlerTrait.topic">StepHandlerTrait</a> provides this functionality,
+        Because all steps use the Step event handler, it is best to call step specific methods from
+        the Step event handler to do this for individual steps;
+        the <a href="StepHandlerTrait.topic">StepHandlerTrait</a> provides this functionality,
         calling methods with the same name as the current step.
     </p>
-    <p>If the Step event handler is rendering the step's form,
-        it calls <a href="Step-Event.topic#setresponse">StepEvent::setResponse($response)</a>.
-        If the Step event handler is validating form data it either re-renders the form and
-        calls <a href="Step-Event.topic#setresponse">StepEvent::setResponse($response)</a> if validation fails,
-        or calls <a href="Step-Event.topic#setdata">StepEvent::setData($data)</a> if validation passes.
-
-    </p>
+    <p>If what the Step event handler does sounds like what would happen in an action, that's because it is.
+        The main difference is that instead of returning a response as an action would, the Step event handler either:</p>
+    <list>
+        <li>
+            Calls <a href="Step-Event.topic#setresponse">StepEvent::setResponse($response)</a>
+            with the rendering result if it is rendering the step's form;
+            either for the first time or if form validation has failed
+        </li>
+        <li>
+            Calls <a href="Step-Event.topic#setdata">StepEvent::setData($data)</a> to pass the form data to Wizard
+            if form validation passes
+        </li>
+    </list>
+    <p>Step event handler can also do a couple of other things:</p>
+    <list>
+        <li>
+            Set branches - if Plot Branching Navigation is being used, the Step event handler can enable or disable
+            branches depending on form data
+        </li>
+        <li>
+            Decide the next step to be processed -
+            go back to a specific step, back a step, repeat the current step, or move forward
+        </li>
+    </list>
 </topic>

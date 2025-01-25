@@ -43,7 +43,7 @@
             <include from="Base-Event.topic" element-id="ispropagationstoppedsummary"></include>
             <include from="Base-Event.topic" element-id="iswizardstoppedsummary"></include>
             <tr>
-                <td>setBranches</td>
+                <td>setBranches()</td>
                 <td>Set which branches are enabled and/or disabled</td>
             </tr>
             <tr>
