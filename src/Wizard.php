@@ -41,15 +41,15 @@ final class Wizard implements WizardInterface
     public const FORWARD_ONLY = true;
     public const STEP_PARAMETER = 'step';
     private const AFTER_WIZARD_EVENT_NOT_SET = 'AfterWizard event not set';
-    private const AFTER_WIZARD_EVENT_NOT_SET_INFO = 'Set AfterWizard event using withEvents() method';
+    private const AFTER_WIZARD_EVENT_NOT_SET_INFO = 'Set AfterWizard event using the withEvents() method';
     private const EVENTS_NOT_SET_EXCEPTION = '"events" not set';
-    private const EVENTS_NOT_SET_EXCEPTION_INFO = 'Set "events" using withEvents() method; the AfterWizard and Step event *must* be set, the StepExpired event must be set if the Wizard has a stepTimeout, the BeforeWizard event is optional';
+    private const EVENTS_NOT_SET_EXCEPTION_INFO = 'Set "events" using the withEvents() method; the AfterWizard and Step events must be set, the StepExpired event must be set if the Wizard has a stepTimeout, the BeforeWizard event is optional';
     private const STEP_EVENT_NOT_SET = 'Step event not set';
-    private const STEP_EVENT_NOT_SET_INFO = 'Set Step event using withEvents()';
+    private const STEP_EVENT_NOT_SET_INFO = 'Set Step event using the withEvents() method';
     private const STEP_EXPIRED_EVENT_NOT_SET = 'StepExpired event not set';
-    private const STEP_EXPIRED_EVENT_NOT_SET_INFO = 'Set StepExpired event using withEvents() method';
+    private const STEP_EXPIRED_EVENT_NOT_SET_INFO = 'Set StepExpired event using the withEvents() method';
     private const STEPS_NOT_SET_EXCEPTION = '"steps" not set';
-    private const STEPS_NOT_SET_EXCEPTION_INFO= 'Set "steps" using withSteps() method';
+    private const STEPS_NOT_SET_EXCEPTION_INFO= 'Set "steps" using the withSteps() method';
     private const STEP_TIMEOUT_AFTER_EVENTS_EXCEPTION = 'withStepTimeout() can not be used after withEvents()';
     private const STEP_TIMEOUT_AFTER_EVENTS_EXCEPTION_INFO = 'Call withStepTimeout() before withEvents()';
     private const BRANCH_KEY = 'branch';
@@ -220,6 +220,12 @@ final class Wizard implements WizardInterface
         return $new;
     }
 
+    /**
+     * @param array $events
+     * @psalm-param non-empty-array<string, callable> $events
+     * @return $this
+     * @throws InvalidConfigException
+     */
     public function withEvents(array $events): self
     {
         if (!array_key_exists(Step::class, $events)) {
@@ -242,7 +248,6 @@ final class Wizard implements WizardInterface
         }
 
         $new = clone $this;
-
         $listeners = new ListenerCollection();
 
         foreach ($events as $name => $listener) {
@@ -395,17 +400,17 @@ final class Wizard implements WizardInterface
         $this->reset();
 
         return serialize([
-            $this->sessionKey,
             $this->autoAdvance,
-            $this->defaultBranch,
-            $this->forwardOnly,
-            $this->sessionData,
-            $this->steps,
-            $this->stepTimeout,
             $this->branchKey,
             $this->dataKey,
+            $this->defaultBranch,
+            $this->forwardOnly,
             $this->repetitionIndexKey,
+            $this->sessionKey,
+            $this->sessionData,
+            $this->steps,
             $this->stepsKey,
+            $this->stepTimeout,
             $this->stepTimeoutKey,
         ]);
     }
@@ -413,19 +418,19 @@ final class Wizard implements WizardInterface
     public function resume(string $data): void
     {
         [
-            $this->sessionKey,
             $this->autoAdvance,
-            $this->defaultBranch,
-            $this->forwardOnly,
-            $this->sessionData,
-            $this->steps,
-            $this->stepTimeout,
             $this->branchKey,
             $this->dataKey,
+            $this->defaultBranch,
+            $this->forwardOnly,
             $this->repetitionIndexKey,
+            $this->sessionKey,
+            $this->sessionData,
+            $this->steps,
             $this->stepsKey,
+            $this->stepTimeout,
             $this->stepTimeoutKey,
-        ] = unserialize($data, ['allowed_classes' => false]);
+        ] = unserialize($data, ['allowed_classes' => true]);
 
         foreach ($this->sessionData as $key => $value) {
             $this
