@@ -13,6 +13,7 @@ use BeastBytes\Wizard\Event\BeforeWizard;
 use BeastBytes\Wizard\Event\Step;
 use BeastBytes\Wizard\Event\StepExpired;
 use BeastBytes\Wizard\Exception\InvalidConfigException;
+use BeastBytes\Wizard\Exception\RuntimeException;
 use BeastBytes\Wizard\Wizard;
 use Generator;
 use HttpSoft\Message\Response;
@@ -23,9 +24,6 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use Yiisoft\EventDispatcher\Dispatcher\Dispatcher;
-use Yiisoft\EventDispatcher\Provider\ListenerCollection;
-use Yiisoft\EventDispatcher\Provider\Provider;
 use Yiisoft\Http\Header;
 use Yiisoft\Http\Method;
 use Yiisoft\Http\Status;
@@ -64,8 +62,8 @@ class WizardTest extends TestCase
     private const STEP_TIMEOUT = 2;
     private const URI = '/wizard';
 
-    private array $branches;
-    private array $data;
+    private array $branches = [];
+    private array $data = [];
     private bool $endOnGet;
     private string $goto;
     private bool $repeatGoBack;
@@ -94,7 +92,6 @@ class WizardTest extends TestCase
         $this->repeatGoBack = false;
 
         $this->wizard = new Wizard(
-            new Dispatcher($this->createProvider()),
             new Inflector(),
             new ResponseFactory(),
             self::$session,
@@ -134,19 +131,110 @@ class WizardTest extends TestCase
     #[Test]
     public function no_steps(): void
     {
-        $this->expectException(InvalidConfigException::class);
-        $this->expectExceptionMessage('"steps" not set');
-        $this
-            ->wizard
-            ->step(new ServerRequest(method: Method::GET))
-        ;
         try {
             $this
                 ->wizard
                 ->step(new ServerRequest(method: Method::GET))
             ;
         } catch (InvalidConfigException $exception) {
-            $this->assertSame('Set "steps" using withSteps() method', $exception->getSolution());
+            $this->assertSame('"steps" not set', $exception->getMessage());
+            $this->assertSame('Set "steps" using the withSteps() method', $exception->getSolution());
+        }
+    }
+
+    #[Test]
+    public function no_events(): void
+    {
+        $steps = ['step_1', 'step_2', 'step_3'];
+        try {
+            $this
+                ->wizard
+                ->withSteps($steps)
+                ->step(new ServerRequest(method: Method::GET))
+            ;
+        } catch (InvalidConfigException $exception) {
+            $this->assertSame('"events" not set', $exception->getMessage());
+            $this->assertSame(
+                'Set "events" using the withEvents() method; the AfterWizard and Step events must be set, the StepExpired event must be set if the Wizard has a stepTimeout, the BeforeWizard event is optional',
+                $exception->getSolution()
+            );
+        }
+    }
+
+    #[Test]
+    public function no_step_event(): void
+    {
+        $steps = ['step_1', 'step_2', 'step_3'];
+        try {
+            $this
+                ->wizard
+                ->withSteps($steps)
+                ->withEvents([])
+                ->step(new ServerRequest(method: Method::GET))
+            ;
+        } catch (InvalidConfigException $exception) {
+            $this->assertSame('Step event not set', $exception->getMessage());
+            $this->assertSame('Set Step event using the withEvents() method', $exception->getSolution());
+        }
+    }
+
+    #[Test]
+    public function no_after_wizard_event(): void
+    {
+        $steps = ['step_1', 'step_2', 'step_3'];
+        try {
+            $this
+                ->wizard
+                ->withSteps($steps)
+                ->withEvents([
+                    Step::class => [$this, 'step'],
+                ])
+                ->step(new ServerRequest(method: Method::GET))
+            ;
+        } catch (InvalidConfigException $exception) {
+            $this->assertSame('AfterWizard event not set', $exception->getMessage());
+            $this->assertSame('Set AfterWizard event using the withEvents() method', $exception->getSolution());
+        }
+    }
+
+    #[Test]
+    public function no_step_expired_event(): void
+    {
+        $steps = ['step_1', 'step_2', 'step_3'];
+        try {
+            $this
+                ->wizard
+                ->withStepTimeout(2)
+                ->withEvents([
+                    Step::class => [$this, 'step'],
+                    AfterWizard::class => [$this, 'afterWizard']
+                ])
+                ->step(new ServerRequest(method: Method::GET))
+            ;
+        } catch (InvalidConfigException $exception) {
+            $this->assertSame('StepExpired event not set', $exception->getMessage());
+            $this->assertSame('Set StepExpired event using the withEvents() method', $exception->getSolution());
+        }
+    }
+
+    #[Test]
+    public function step_timeout_after_events(): void
+    {
+        $steps = ['step_1', 'step_2', 'step_3'];
+        try {
+            $this
+                ->wizard
+                ->withSteps($steps)
+                ->withEvents([
+                    Step::class => [$this, 'step'],
+                    AfterWizard::class => [$this, 'afterWizard']
+                ])
+                ->withStepTimeout(2)
+                ->step(new ServerRequest(method: Method::GET))
+            ;
+        } catch (RuntimeException $exception) {
+            $this->assertSame('withStepTimeout() can not be used after withEvents()', $exception->getMessage());
+            $this->assertSame('Call withStepTimeout() before withEvents()', $exception->getSolution());
         }
     }
 
@@ -160,6 +248,11 @@ class WizardTest extends TestCase
         $result = $this
             ->wizard
             ->withSteps($steps)
+            ->withEvents([
+                AfterWizard::class => [$this, 'afterWizard'],
+                BeforeWizard::class => [$this, 'beforeWizard'],
+                Step::class => [$this, 'step'],
+            ])
             ->step(new ServerRequest(method: Method::GET))
         ;
 
@@ -188,6 +281,10 @@ class WizardTest extends TestCase
         $this->wizard = $this
             ->wizard
             ->withAutoAdvance($autoAdvance)
+            ->withEvents([
+                Step::class => [$this, 'step'],
+                AfterWizard::class => [$this, 'afterWizard']
+            ])
             ->withSteps($steps)
         ;
         $this
@@ -234,6 +331,10 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
+            ->withEvents([
+                Step::class => [$this, 'step'],
+                AfterWizard::class => [$this, 'afterWizard']
+            ])
             ->withSteps($steps)
         ;
 
@@ -273,6 +374,10 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
+            ->withEvents([
+                Step::class => [$this, 'step'],
+                AfterWizard::class => [$this, 'afterWizard']
+            ])
             ->withSteps($steps)
         ;
 
@@ -284,6 +389,10 @@ class WizardTest extends TestCase
         do {
             $this
                 ->wizard
+                ->withEvents([
+                    Step::class => [$this, 'step'],
+                    AfterWizard::class => [$this, 'afterWizard']
+                ])
                 ->step(new ServerRequest(method: Method::GET))
             ;
             $result = $this
@@ -307,6 +416,10 @@ class WizardTest extends TestCase
         $this->wizard = $this
             ->wizard
             ->withForwardOnly($forwardOnly)
+            ->withEvents([
+                Step::class => [$this, 'step'],
+                AfterWizard::class => [$this, 'afterWizard']
+            ])
             ->withSteps($steps)
         ;
         $this
@@ -364,6 +477,10 @@ class WizardTest extends TestCase
         $this->wizard = $this
             ->wizard
             ->withAutoAdvance($autoAdvance)
+            ->withEvents([
+                Step::class => [$this, 'step'],
+                AfterWizard::class => [$this, 'afterWizard']
+            ])
             ->withSteps($steps)
         ;
         $this
@@ -439,6 +556,10 @@ class WizardTest extends TestCase
         $this->wizard = $this
             ->wizard
             ->withDefaultBranch($defaultBranch)
+            ->withEvents([
+                Step::class => [$this, 'step'],
+                AfterWizard::class => [$this, 'afterWizard']
+            ])
             ->withSteps($steps)
         ;
         $this
@@ -490,6 +611,10 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
+            ->withEvents([
+                Step::class => [$this, 'step'],
+                AfterWizard::class => [$this, 'afterWizard']
+            ])
             ->withSteps($steps)
         ;
         $this
@@ -534,6 +659,10 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
+            ->withEvents([
+                Step::class => [$this, 'step'],
+                AfterWizard::class => [$this, 'afterWizard']
+            ])
             ->withSteps($steps)
         ;
 
@@ -575,6 +704,10 @@ class WizardTest extends TestCase
             ->wizard
             ->withAutoAdvance($autoAdvance)
             ->withForwardOnly($forwardOnly)
+            ->withEvents([
+                Step::class => [$this, 'step'],
+                AfterWizard::class => [$this, 'afterWizard']
+            ])
             ->withSteps($steps)
         ;
         $this
@@ -676,6 +809,11 @@ class WizardTest extends TestCase
         $this->wizard = $this
             ->wizard
             ->withStepTimeout(self::STEP_TIMEOUT)
+            ->withEvents([
+                AfterWizard::class => [$this, 'afterWizard'],
+                Step::class => [$this, 'step'],
+                StepExpired::class => [$this, 'stepExpired'],
+            ])
             ->withSteps($steps)
         ;
         $this
@@ -713,7 +851,12 @@ class WizardTest extends TestCase
 
         $this->wizard = $this
             ->wizard
-            ->withStepTimeout(self::STEP_TIMEOUT)
+            //->withStepTimeout(self::STEP_TIMEOUT)
+            ->withEvents([
+                AfterWizard::class => [$this, 'afterWizard'],
+                Step::class => [$this, 'step'],
+                StepExpired::class => [$this, 'stepExpired'],
+            ])
             ->withSteps($steps)
         ;
 
@@ -747,7 +890,6 @@ class WizardTest extends TestCase
         // Use local $wizard from here
         self::$session = new Session();
         $wizard = new Wizard(
-            new Dispatcher($this->createProvider()),
             new Inflector(),
             new ResponseFactory(),
             self::$session,
@@ -755,11 +897,19 @@ class WizardTest extends TestCase
         );
 
         $wizard->resume($paused);
+        $wizard = $wizard
+            ->withEvents([
+                AfterWizard::class => [$this, 'afterWizard'],
+                Step::class => [$this, 'step'],
+                StepExpired::class => [$this, 'stepExpired'],
+            ])
+        ;
 
         do {
             $wizard->step(new ServerRequest(method: Method::GET));
             $result = $wizard->step(new ServerRequest(method: Method::POST));
         } while ($result->getStatusCode() === Status::FOUND);
+
 
         $this->assertSame(1, $this->events[AfterWizard::class]);
         $this->assertSame($expectedData, $this->data);
@@ -772,7 +922,6 @@ class WizardTest extends TestCase
     public function step_parameter()
     {
         $this->wizard = new Wizard(
-            new Dispatcher($this->createProvider()),
             new Inflector(),
             new ResponseFactory(),
             self::$session,
@@ -784,6 +933,10 @@ class WizardTest extends TestCase
         $this->wizard = $this
             ->wizard
             ->withStepParameter(self::STEP_PARAMETER)
+            ->withEvents([
+                Step::class => [$this, 'step'],
+                AfterWizard::class => [$this, 'afterWizard']
+            ])
             ->withSteps($steps)
         ;
         $this
@@ -1060,27 +1213,6 @@ class WizardTest extends TestCase
 
             yield $key => ['sessionKey' => $value];
         }
-    }
-
-    public static function stepParameterProvider(): Generator
-    {
-        foreach ([
-            'step',
-            'page',
-            'item',
-        ] as $parameter) {
-            yield ['stepParameter' => $parameter];
-        }
-    }
-
-    private function createProvider(): Provider
-    {
-        return new Provider((new ListenerCollection())
-            ->add([$this, 'afterWizard'], AfterWizard::class)
-            ->add([$this, 'beforeWizard'], BeforeWizard::class)
-            ->add([$this, 'step'], Step::class)
-            ->add([$this, 'stepExpired'], StepExpired::class)
-        );
     }
 
     private function createUrlGenerator(string $stepRoutePattern = self::URI): UrlGeneratorInterface {
