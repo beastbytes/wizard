@@ -24,35 +24,35 @@
             <include from="Base-Event.topic" element-id="constructsummary"></include>
             <tr>
                 <td>getBranches()</td>
-                <td> </td>
+                <td>Returns a map defining which branches are enabled and/or disabled</td>
             </tr>
             <tr>
                 <td>getData()</td>
-                <td> </td>
+                <td>Returns data for the current step</td>
             </tr>
             <tr>
                 <td>getGoto()</td>
-                <td> </td>
+                <td>Returns a value indicating which step Wizard is to process next</td>
             </tr>
             <include from="ResponseTrait.topic" element-id="getresponsesummary"></include>
             <include from="Base-Event.topic" element-id="getwizardsummary"></include>
             <tr>
                 <td>hasData()</td>
-                <td> </td>
+                <td>Returns a value indicating if the event contains data for the current step</td>
             </tr>
             <include from="Base-Event.topic" element-id="ispropagationstoppedsummary"></include>
             <include from="Base-Event.topic" element-id="iswizardstoppedsummary"></include>
             <tr>
                 <td>setBranches</td>
-                <td> </td>
+                <td>Set which branches are enabled and/or disabled</td>
             </tr>
             <tr>
                 <td>setData()</td>
-                <td> </td>
+                <td>Set the data for the current step</td>
             </tr>
             <tr>
                 <td>setGoto()</td>
-                <td> </td>
+                <td>Set the step that Wizard should process next </td>
             </tr>
             <include from="ResponseTrait.topic" element-id="setresponsesummary" id="setresponsesummary"></include>
             <include from="Base-Event.topic" element-id="stoppropagationsummary"></include>
@@ -63,6 +63,7 @@
     <chapter title="Method Details" id="method-details">
         <include from="Base-Event.topic" element-id="construct" id="construct"></include>
         <chapter title="getBranches()" id="getbranches">
+            <p>Returns a map that defines which branches are enabled and/or disabled.</p>
             <p>See also:</p>
             <list>
                 <li><a href="Step-Event.topic" anchor="setbranches">setBranches()</a></li>
@@ -73,12 +74,13 @@
             <table>
                 <tr>
                     <td>Return</td>
-                    <td>array</td>
+                    <td>array[string => Wizard::BRANCH_DISABLED | Wizard::BRANCH_ENABLED]</td>
                     <td> </td>
                 </tr>
             </table>
         </chapter>
         <chapter title="getData()" id="getdata">
+            <p>Returns the data for the current step.</p>
             <p>See also:</p>
             <list>
                 <li><a href="Step-Event.topic" anchor="hasdata">hasData()</a></li>
@@ -96,6 +98,7 @@
             </table>
         </chapter>
         <chapter title="getGoto()" id="getgoto">
+            <p>Return which step Wizard is to process next.</p>
             <p>See also:</p>
             <list>
                 <li><a href="Step-Event.topic" anchor="setgoto">setGoto()</a></li>
@@ -107,7 +110,11 @@
                 <tr>
                     <td>Return</td>
                     <td>int|string</td>
-                    <td> </td>
+                    <td id="goto">Which step the Wizard process next<br/>
+                        Wizard::DIRECTION_BACKWARD - the previous step<br/>
+                        Wizard::DIRECTION_FORWARD - the next step<br/>
+                        Wizard::DIRECTION_REPEAT - repeat the current step<br/>
+                        string: the name of the next step to process</td>
                 </tr>
             </table>
         </chapter>
@@ -151,11 +158,17 @@
                     <td>$branches</td>
                     <td>array</td>
                     <td>Required</td>
-                    <td> </td>
+                    <td>
+                        A map that defines which branches are enabled and/or disabled<br/>
+                        Keys are branch names<br/>
+                        Values are either Wizard::BRANCH_DISABLED or Wizard::BRANCH_ENABLED
+                    </td>
+
                 </tr>
             </table>
         </chapter>
         <chapter title="setData()" id="setdata">
+            <p>Set the data for the current step.</p>
             <p>See also:</p>
             <list>
                 <li><a href="Step-Event.topic" anchor="getdata">getData()</a></li>
@@ -180,6 +193,7 @@
             </table>
         </chapter>
         <chapter title="setGoto()" id="setgoto">
+            <p>Set which step the Wizard should process next.</p>
             <p>See also:</p>
             <list>
                 <li><a href="Step-Event.topic" anchor="getgoto">getGoto()</a></li>
@@ -201,8 +215,8 @@
                     <td>Which step the Wizard process next<br/>
                         Wizard::DIRECTION_BACKWARD - the previous step<br/>
                         Wizard::DIRECTION_FORWARD - the next step<br/>
-                        Wizard::DIRECTION_REPEAT - repeat current step<br/>
-                        string: the name of the next step
+                        Wizard::DIRECTION_REPEAT - repeat the current step<br/>
+                        string: the name of the next step to process
                     </td>
                 </tr>
             </table>
