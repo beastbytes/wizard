@@ -6,18 +6,15 @@
 
 declare(strict_types=1);
 
-namespace BeastBytes\Wizard;
+namespace BeastBytes\Wizard\Event;
 
 use BeastBytes\Wizard\Event\Step as StepEvent;
 
 /*
- * Use this trait when:
- * * the step handler methods are in the class using this trait
- * * the step handler method names are the same as the step names
+ * Provides a step event handler that calls a method with the name of the current step
  */
 trait StepHandlerTrait
 {
-    /* Step event handler */
     public function stepHandler(StepEvent $event): void
     {
         $step = $event
