@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="Step Event Handler" id="Step-Event-Handler">
+
+    <p>The Step event handler is responsible for rendering the form a step and for validating the form on submission.
+        Because all steps use the Step event handler, it is best to call step specific methods to do this
+        for individual steps; the <a href="StepHandlerTrait.topic">StepHandlerTrait</a> provides this functionality,
+        calling methods with the same name as the current step.
+    </p>
+    <p>If the Step event handler is rendering the step's form,
+        it calls <a href="Step-Event.topic#setresponse">StepEvent::setResponse($response)</a>.
+        If the Step event handler is validating form data it either re-renders the form and
+        calls <a href="Step-Event.topic#setresponse">StepEvent::setResponse($response)</a> if validation fails,
+        or calls <a href="Step-Event.topic#setdata">StepEvent::setData($data)</a> if validation passes.
+
+    </p>
+</topic>

@@ -41,19 +41,46 @@
 
     <chapter title="Method Details" id="method-details">
         <chapter title="getResponse()" id="getresponse">
+            <p>Returns the response.</p>
+            <p>See also:</p>
+            <list>
+                <li><a href="ResponseTrait.topic#setresponse">setResponse()</a></li>
+            </list>
             <code-block lang="php">
             public function getResponse(): ?ResponseInterface
             </code-block>
-            <p>Returns the response.</p>
-            <p>See also: <a href="ResponseTrait.topic#setresponse">setResponse()</a></p>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>?ResponseInterface</td>
+                    <td>The response or null if no response is set</td>
+                </tr>
+            </table>
         </chapter>
 
         <chapter title="setResponse()" id="setresponse">
+            <p>Sets the response.</p>
+            <p>See also:</p>
+            <list>
+                <li><a href="ResponseTrait.topic#getresponse">getResponse()</a></li>
+            </list>
             <code-block lang="php">
             public function setResponse(ResponseInterface $response): self
             </code-block>
-            <p>Sets the response.</p>
-            <p>See also: <a href="ResponseTrait.topic#getresponse">getResponse()</a></p>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$response</td>
+                    <td>ResponseInterface</td>
+                    <td>Required</td>
+                    <td>The response</td>
+                </tr>
+            </table>
         </chapter>
     </chapter>
 </topic>

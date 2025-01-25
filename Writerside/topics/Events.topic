@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="Events" id="Events">
+
+        <p>Wizard uses events to manage which step is being processed, displaying forms,
+            collecting and providing collected data.</p>
+        <p>All event handlers receive the Wizard instance; they are typically declared in the controller.</p>
+        <p>The Wizard raises the following events:</p>
+
+        <chapter title="BeforeWizard" id="beforewizard">
+            <p>Raised the first time <code>Wizard::step()</code> is called.</p>
+            <p>To prevent the Wizard from running, call <code>BeforeWizard::stopWizard()</code> in the event handler.</p>
+            <p>Handling the BeforeWizard event is optional.</p>
+
+            <chapter title="BeforeWizard State Diagram" id="beforewizard-state-diagram">
+                <code-block lang="Mermaid">
+                    stateDiagram-v2
+                    state stop_wizard &lt;&lt;choice&gt;&gt;
+                    [*] --> Controller
+                    Controller --> Wizard: step()
+                    Wizard --> BeforeWizard
+                    BeforeWizard --> stop_wizard
+                    stop_wizard --> AfterWizard: stopWizard() called
+                    stop_wizard --> Controller: stopWizard() not called
+                </code-block>
+            </chapter>
+        </chapter>
+
+        <chapter title="Step" id="step">
+            <p>The Step event is raised at least twice for every step in the Wizard.</p>
+            <p>The first time it is raised in a step the event handler renders a form.
+                The event is raised again on form submission when the event handler validates the form
+                and either saves the form data or re-renders the form, depending on the validation result.</p>
+            <p>The Step event <i>must</i> be handled.</p>
+
+            <chapter title="Step State Diagram" id="step-state-diagram">
+                <code-block lang="Mermaid">
+                    stateDiagram-v2
+                    state xxx &lt;&lt;choice&gt;&gt;
+                    [*] --> Controller
+                    Controller --> Wizard: step()
+                    Wizard --> Step
+                    Step --> xxx
+                    xxx --> Render_Step1_Form: Step1 GET Request
+                    xxx --> Manage_Step1_Data: Step1 POST Request
+                    xxx --> Render_StepN_Form: StepN GET Request
+                    xxx --> Manage_StepN_Data: StepN POST Request
+                    Render_Step1_Form --> Controller: Step1 form submitted
+                    Manage_Step1_Data --> Controller
+                    Render_StepN_Form --> Controller: StepN form submitted
+                    Manage_StepN_Data --> Controller
+                </code-block>
+            </chapter>
+        </chapter>
+
+        <chapter title="StepExpired" id="stepexpired">
+            <p>If the Wizard is configured with a step timeout, the StepExpired event is raised if a step times out.</p>
+            <p>The StepExpired event <i>must</i> be handled if a step timeout is set.</p>
+
+            <chapter title="StepExpired State Diagram" id="stepexpired-state-diagram">
+                <code-block lang="Mermaid">
+                    stateDiagram-v2
+                    state xxx &lt;&lt;choice&gt;&gt;
+                    [*] --> Controller
+                    Controller --> Wizard: step()
+                    Wizard --> xxx
+                    xxx --> Render_StepN_Form: StepN GET Request
+                    xxx --> StepExpired: StepN POST Request &amp; step timeout expired
+                    Render_StepN_Form --> Controller: StepN form submitted
+                    StepExpired --> [*]: Go to step expired action
+                </code-block>
+            </chapter>
+        </chapter>
+
+        <chapter title="AfterWizard" id="afterwizard">
+            <p>The AfterWizard is raised when the Wizard stops.
+                This may be because the Wizard has completed or an event handler has stopped the Wizard.</p>
+            <p>The AfterWizard event <i>must</i> be handled.</p>
+
+            <chapter title="AfterWizard State Diagram" id="afterwizard-state-diagram">
+                <code-block lang="Mermaid">
+                    stateDiagram-v2
+                    state end &lt;&lt;choice&gt;&gt;
+                    state xxx &lt;&lt;choice&gt;&gt;
+                    [*] --> Controller
+                    Controller --> Wizard: step()
+                    Wizard --> end
+                    end --> xxx: Steps to process
+                    xxx --> Render_StepN_Form: StepN GET Request
+                    xxx --> Manage_StepN_Data: StepN POST Request
+                    Render_StepN_Form --> Controller: StepN form submitted
+                    Manage_StepN_Data --> Controller
+                    end --> AfterWizard: All steps processed
+                    AfterWizard --> [*]: Go to after wizard action
+                </code-block>
+            </chapter>
+        </chapter>
+</topic>

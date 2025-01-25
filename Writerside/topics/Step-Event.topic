@@ -22,24 +22,193 @@
                 <td>Description</td>
             </tr>
             <include from="Base-Event.topic" element-id="constructsummary"></include>
+            <tr>
+                <td>getBranches()</td>
+                <td> </td>
+            </tr>
+            <tr>
+                <td>getData()</td>
+                <td> </td>
+            </tr>
+            <tr>
+                <td>getGoto()</td>
+                <td> </td>
+            </tr>
             <include from="ResponseTrait.topic" element-id="getresponsesummary"></include>
             <include from="Base-Event.topic" element-id="getwizardsummary"></include>
+            <tr>
+                <td>hasData()</td>
+                <td> </td>
+            </tr>
             <include from="Base-Event.topic" element-id="ispropagationstoppedsummary"></include>
             <include from="Base-Event.topic" element-id="iswizardstoppedsummary"></include>
-            <include from="ResponseTrait.topic" element-id="setresponsesummary"></include>
+            <tr>
+                <td>setBranches</td>
+                <td> </td>
+            </tr>
+            <tr>
+                <td>setData()</td>
+                <td> </td>
+            </tr>
+            <tr>
+                <td>setGoto()</td>
+                <td> </td>
+            </tr>
+            <include from="ResponseTrait.topic" element-id="setresponsesummary" id="setresponsesummary"></include>
             <include from="Base-Event.topic" element-id="stoppropagationsummary"></include>
             <include from="Base-Event.topic" element-id="stopwizardsummary"></include>
         </table>
     </chapter>
 
     <chapter title="Method Details" id="method-details">
-        <include from="Base-Event.topic" element-id="construct"></include>
-        <include from="ResponseTrait.topic" element-id="getresponse"></include>
-        <include from="Base-Event.topic" element-id="getwizard"></include>
-        <include from="Base-Event.topic" element-id="ispropagationstopped"></include>
-        <include from="Base-Event.topic" element-id="iswizardstopped"></include>
-        <include from="ResponseTrait.topic" element-id="setresponse"></include>
-        <include from="Base-Event.topic" element-id="stoppropagation"></include>
-        <include from="Base-Event.topic" element-id="stopwizard"></include>
+        <include from="Base-Event.topic" element-id="construct" id="construct"></include>
+        <chapter title="getBranches()" id="getbranches">
+            <p>See also:</p>
+            <list>
+                <li><a href="Step-Event.topic" anchor="setbranches">setBranches()</a></li>
+            </list>
+            <code-block lang="php">
+            public function getBranches(): array
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>array</td>
+                    <td> </td>
+                </tr>
+            </table>
+        </chapter>
+        <chapter title="getData()" id="getdata">
+            <p>See also:</p>
+            <list>
+                <li><a href="Step-Event.topic" anchor="hasdata">hasData()</a></li>
+                <li><a href="Step-Event.topic" anchor="setdata">setData()</a></li>
+            </list>
+            <code-block lang="php">
+            public function getData(): array
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>array</td>
+                    <td>Data that has been set</td>
+                </tr>
+            </table>
+        </chapter>
+        <chapter title="getGoto()" id="getgoto">
+            <p>See also:</p>
+            <list>
+                <li><a href="Step-Event.topic" anchor="setgoto">setGoto()</a></li>
+            </list>
+            <code-block lang="php">
+            public function getGoto(): int|string
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>int|string</td>
+                    <td> </td>
+                </tr>
+            </table>
+        </chapter>
+        <include from="ResponseTrait.topic" element-id="getresponse" id="getresponse"></include>
+        <include from="Base-Event.topic" element-id="getwizard" id="getwizard"></include>
+        <chapter title="hasData()" id="hasdata">
+            <p>See also:</p>
+            <list>
+                <li><a href="Step-Event.topic" anchor="getdata">getData()</a></li>
+                <li><a href="Step-Event.topic" anchor="setdata">setData()</a></li>
+            </list>
+            <code-block lang="php">
+            public function hasData(): bool
+            </code-block>
+            <table>
+                <tr>
+                    <td>Return</td>
+                    <td>bool</td>
+                    <td>Whether the event contains data</td>
+                </tr>
+            </table>
+        </chapter>
+        <include from="Base-Event.topic" element-id="ispropagationstopped" id="ispropagationstopped"></include>
+        <include from="Base-Event.topic" element-id="iswizardstopped" id="iswizardstopped"></include>
+        <chapter title="setBranches()" id="setbranches">
+            <p>See also:</p>
+            <list>
+                <li><a href="Step-Event.topic" anchor="getbranches">getBranches()</a></li>
+            </list>
+            <code-block lang="php">
+            public function setBranches(array $branches): void
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$branches</td>
+                    <td>array</td>
+                    <td>Required</td>
+                    <td> </td>
+                </tr>
+            </table>
+        </chapter>
+        <chapter title="setData()" id="setdata">
+            <p>See also:</p>
+            <list>
+                <li><a href="Step-Event.topic" anchor="getdata">getData()</a></li>
+                <li><a href="Step-Event.topic" anchor="hasdata">hasData()</a></li>
+            </list>
+            <code-block lang="php">
+            public function setData(mixed $data): void
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$data</td>
+                    <td>mixed</td>
+                    <td>Required</td>
+                    <td>The data</td>
+                </tr>
+            </table>
+        </chapter>
+        <chapter title="setGoto()" id="setgoto">
+            <p>See also:</p>
+            <list>
+                <li><a href="Step-Event.topic" anchor="getgoto">getGoto()</a></li>
+            </list>
+            <code-block lang="php">
+            public function setGoto(int|string $goto): void
+            </code-block>
+            <table>
+                <tr>
+                    <td>Parameter</td>
+                    <td>Type</td>
+                    <td>Default</td>
+                    <td>Description</td>
+                </tr>
+                <tr>
+                    <td>$goto</td>
+                    <td>int|string</td>
+                    <td>Wizard::DIRECTION_FORWARD</td>
+                    <td>Which step the Wizard process next<br/>
+                        Wizard::DIRECTION_BACKWARD - the previous step<br/>
+                        Wizard::DIRECTION_FORWARD - the next step<br/>
+                        Wizard::DIRECTION_REPEAT - repeat current step<br/>
+                        string: the name of the next step
+                    </td>
+                </tr>
+            </table>
+        </chapter>
+        <include from="ResponseTrait.topic" element-id="setresponse" id="setresponse"></include>
+        <include from="Base-Event.topic" element-id="stoppropagation" id="stoppropagation"></include>
+        <include from="Base-Event.topic" element-id="stopwizard" id="stopwizard"></include>
     </chapter>
 </topic>

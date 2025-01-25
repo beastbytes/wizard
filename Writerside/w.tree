@@ -8,6 +8,9 @@
 
     <toc-element topic="About-Wizard.topic"/>
     <toc-element topic="Useage.topic"/>
+    <toc-element topic="Events.topic">
+        <toc-element topic="Step-Event-Handler.topic"/>
+    </toc-element>
     <toc-element topic="API.md">
         <toc-element topic="Wizard.topic">
         </toc-element>
@@ -19,6 +22,6 @@
             <toc-element topic="StepExpired-Event.topic"/>
             <toc-element topic="StepHandlerTrait.topic"/>
         </toc-element>
+        <toc-element topic="ResponseTrait.topic"/>
     </toc-element>
-    <toc-element topic="ResponseTrait.topic"/>
 </instance-profile>
