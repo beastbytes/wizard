@@ -58,8 +58,11 @@
 
         <chapter title="Deciding on the Branch to Use" id="deciding-on-the-branch-to-use">
             <p>Deciding which branch to use is done in the Step event handler.</p>
-            <p>The <emphasis>'fuel'</emphasis> will return the type of fuel the car uses; from that we can choose which
-            branch to take. Our Step event handler for the <emphasis>'fuel'</emphasis> will be something like:</p>
+            <p>
+                The <emphasis>'fuel'</emphasis> step form will return the type of fuel the car uses;
+                from that we can choose which branch to take.
+                Our Step event handler for the <emphasis>'fuel'</emphasis> step will be something like:
+            </p>
 
             <code-block lang="php" noinject="true">
                 private function fuel(Step $event)
@@ -90,12 +93,7 @@
 
                     $response = $this
                         ->viewRenderer
-                        ->render(
-                            'fuel', // an ordinary view file
-                            [
-                                'formModel' => $formModel,
-                            ]
-                        )
+                        ->render('fuel', ['formModel' => $formModel])
                     ;
 
                     $event->setResponse($response);
@@ -109,17 +107,18 @@
                     enable the <emphasis>electric</emphasis> branch.
                 </p>
                 <p>
-                    So why do we not enable the <emphasis>fossil</emphasis> branch and
-                    disable the <emphasis>electric</emphasis> branch if the fuel type is fossil? We don't have to because
-                    Wizard takes the default branch - the first branch in a branch group - by default.
+                    Why do we not enable the <emphasis>fossil</emphasis> branch and
+                    disable the <emphasis>electric</emphasis> branch if the fuel type is fossil?
+                    We don't have to because Wizard takes the default branch - the first branch in a branch group -
+                    by default.
                 </p>
                 <p>
-                    If you would rather be explicit in the event handler, call
+                    You can disable this behaviour and skip all branch groups unless a branch is specifically enabled
+                    by calling
                     <code>
                         <a href="Wizard.topic#withdefaultbranch">Wizard::withDefaultBranch(!Wizard::DEFAULT_BRANCH)</a>
                     </code>
-                    when setting up Wizard. This will cause Wizard to skip a branch group unless a branch is
-                    specifically enabled.
+                    when setting up Wizard.
                 </p>
             </chapter>
         </chapter>
