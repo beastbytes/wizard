@@ -159,11 +159,12 @@
                  * so the application must check
                  * how many repetitions there have been.
                  * If more than one step's data has been saved
-                 * the data is an array of step data. In this case
-                 * if the application saves form data "as is",
+                 * the data is an array of step data.
+                 * If the application saves form data "as is" -
+                 * an array of key=>value pairs,
                  * if the first key is a string the count is 1,
                  * if the first key is int the count is
-                 * the size of the array
+                 * the size of the array,
                  * plus 1 for the data from this repetition
                  */
                 $maxCountReached = $this
