@@ -3,7 +3,7 @@
         SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
 <topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
-       title="StepExpired Event" id="StepExpired-Event" help-id="StepExpired-Event">
+       title="StepExpired Event" id="StepExpired-Event">
 
     <p>The StepExpired event is raised if the Wizard has a step timeout set and a step in not processed within the timeout period.</p>
 
