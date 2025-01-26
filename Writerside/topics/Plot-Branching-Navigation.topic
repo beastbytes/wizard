@@ -11,7 +11,7 @@
         "If you answered <i>Yes</i> to Q3 goto Q10, else goto Q4"
     </p>
     <p>
-        A simple example: a survey is collecting information on the car you drive.
+        An example: a survey is collecting information on the car you drive.
         Depending on the fuel type different questions can be asked; for example,
         <code>What is the fuel consumption?</code> for petrol and diesel cars,
         whereas <code>Can you charge your car at home?</code> is relevant for EVs.
