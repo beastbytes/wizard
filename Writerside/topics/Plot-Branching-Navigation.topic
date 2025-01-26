@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="Plot Branching Navigation" id="Plot-Branching-Navigation" help-id="Plot Branching Navigation">
+
+    <p>
+        Plot Branching Navigation (PBN) allows different sequences of steps to be processed depending on user input.
+        You've probably come across PBN when completing surveys and questionnaires:
+        "If you answered <i>Yes</i> to Q3 goto Q10, else goto Q4"
+    </p>
+    <p>
+        A simple example: a survey is collecting information on the car you drive.
+        Depending on the fuel type different questions can be asked; for example,
+        <code>What is the fuel consumption?</code> for petrol and diesel cars,
+        whereas <code>Can you charge your car at home?</code> is relevant for EVs.
+    </p>
+    <p>
+        Wizard allows us to this by setting up the <emphasis>steps array</emphasis>
+        and choosing the appropriate branch in the <emphasis>Step event handler</emphasis>.
+    </p>
+
+    <chapter title="Steps Array" id="steps-array">
+        <p>The <emphasis>steps array</emphasis> with PBN follows a simple pattern:</p>
+        <list>
+            <li>
+                <p>A <emphasis>step</emphasis> is a string that specifies the step name.</p>
+            </li>
+            <li>
+                <p>
+                    A <emphasis>branch group</emphasis> is an array; the keys are branch names,
+                    the values are arrays of steps and/or branch groups.
+                </p>
+            </li>
+        </list>
+        <p>The <emphasis>only</emphasis> restriction is that the first entry must be a <emphasis>step</emphasis>.</p>
+
+        <p>Using the car example, the <emphasis>steps array</emphasis> might look something like:</p>
+        <code-block lang="php">
+            $steps = [
+                'make',
+                'model',
+                'fuel',
+                [
+                    'fossil' => [
+                        'tank_capacity',
+                        'consumption',
+                    ],
+                    'electric' => [
+                        'battery_capacity',
+                        'home_charging',
+                    ]
+                ],
+                'range'
+            ];
+        </code-block>
+
+        <chapter title="Deciding on the Branch to Use" id="deciding-on-the-branch-to-use">
+            <p>Deciding which branch to use is done in the Step event handler.</p>
+            <p>The <emphasis>'fuel'</emphasis> will return the type of fuel the car uses; from that we can choose which
+            branch to take. Our Step event handler for the <emphasis>'fuel'</emphasis> will be something like:</p>
+
+            <code-block lang="php" noinject="true">
+                private function fuel(Step $event)
+                {
+                    $formModel = new FuelForm();
+
+                    if (
+                        $this
+                            ->formHydrator
+                            ->populateFromPostAndValidate(
+                                $formModel,
+                                $event->getRequest()
+                            )
+                    ) {
+                        $data = $formModel->getData();
+                        $event->setData($data);
+
+                        // Decide which branch to take
+                        if ($data['fuel'] === self::FUEL_ELECTRIC) {
+                            $event->setBranches([
+                                'fossil' => Wizard::BRANCH_DISABLED
+                                'electric' => Wizard::BRANCH_ENABLED
+                            ]);
+                        }
+
+                        return;
+                    }
+
+                    $response = $this
+                        ->viewRenderer
+                        ->render(
+                            'fuel', // an ordinary view file
+                            [
+                                'formModel' => $formModel,
+                            ]
+                        )
+                    ;
+
+                    $event->setResponse($response);
+                }
+            </code-block>
+
+            <chapter title="Default Branch" id="default-branch">
+                <p>
+                    In the above example we check the fuel type and if it's electric we
+                    disable the <emphasis>fossil</emphasis> branch and
+                    enable the <emphasis>electric</emphasis> branch.
+                </p>
+                <p>
+                    So why do we not enable the <emphasis>fossil</emphasis> branch and
+                    disable the <emphasis>electric</emphasis> branch if the fuel type is fossil? We don't have to because
+                    Wizard takes the default branch - the first branch in a branch group - by default.
+                </p>
+                <p>
+                    If you would rather be explicit in the event handler, call
+                    <code>
+                        <a href="Wizard.topic#withdefaultbranch">Wizard::withDefaultBranch(!Wizard::DEFAULT_BRANCH)</a>
+                    </code>
+                    when setting up Wizard. This will cause Wizard to skip a branch group unless a branch is
+                    specifically enabled.
+                </p>
+            </chapter>
+        </chapter>
+    </chapter>
+</topic>

@@ -3,28 +3,28 @@
         SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
 <topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
-       title="Useage" id="Usage" help-id="Useage">
+       title="Using Wizard" id="Using-Wizard" help-id="Using Wizard">
     <p>Wizard is used in a Controller; it uses a single action that all steps use to render and submit forms,
         greatly simplifying routing - there is only one route for a Wizard.</p>
 
-    <code-block lang="php">
+    <code-block lang="php" noinject="true">
 class MyController
 {
     private const WIZARD_STEPS = ['step_1', 'step_2', 'step_3'];
 
     public function wizard(
-            ServerRequestInterface $request,
-            WizardInterface $wizard
+        ServerRequestInterface $request,
+        WizardInterface $wizard
     ): ResponseInterface
     {
         return $wizard
-                -&gt;withEvents([
-                    [$this, 'afterWizardHandler'],
-                    [$this, 'stepHandler'],
-                ])
-                -&gt;withForwardOnly(Wizard::FORWARD_ONLY)
-                -&gt;withSteps(self::WIZARD_STEPS)
-                -&gt;step($request)
+            -&gt;withEvents([
+                [$this, 'afterWizardHandler'],
+                [$this, 'stepHandler'],
+            ])
+            -&gt;withForwardOnly(Wizard::FORWARD_ONLY)
+            -&gt;withSteps(self::WIZARD_STEPS)
+            -&gt;step($request)
         ;
     }
 
