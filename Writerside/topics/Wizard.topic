@@ -200,7 +200,7 @@
             <p>The list may change as steps are processed due to Plot Branching.</p>
             <p>See also:</p>
             <list>
-                <li><a href="Wizard.topic#withsteps">Wizard::withSteps()</a></li>
+                <li><p><a href="Wizard.topic#withsteps">Wizard::withSteps()</a></p></li>
             </list>
             <code-block lang="php">
             public function getSteps(): array
@@ -218,7 +218,7 @@
             <p>Returns a string - serialision of the Wizard instance - that can be used with Wizard::resume().</p>
             <p>See also:</p>
             <list>
-                <li><a href="Wizard.topic#resume">Wizard::resume()</a></li>
+                <li><p><a href="Wizard.topic#resume">Wizard::resume()</a></p></li>
             </list>
             <code-block lang="php">
             public function pause(): string
@@ -236,7 +236,7 @@
             <p>Resumes a Wizard instance.</p>
             <p>See also:</p>
             <list>
-                <li><a href="Wizard.topic#pause">Wizard::pause()</a></li>
+                <li><p><a href="Wizard.topic#pause">Wizard::pause()</a></p></li>
             </list>
             <code-block lang="php">
             public function resume(string $data): void
@@ -369,8 +369,8 @@
             <note>If a step timeout is used, this method <b>must</b> be called after <code>Wizard::withStepTimeout()</code></note>
             <p>See also:</p>
             <list>
-                <li><a href="Wizard.topic#resume">Wizard::resume()</a></li>
-                <li><a href="Wizard.topic#withsteptimeout">Wizard::withStepTimeout()</a></li>
+                <li><p><a href="Wizard.topic#resume">Wizard::resume()</a></p></li>
+                <li><p><a href="Wizard.topic#withsteptimeout">Wizard::withStepTimeout()</a></p></li>
             </list>
             <code-block lang="php">
             public function withEvents(array $events): self
@@ -518,7 +518,7 @@
             <p>If used, this method <b>must</b> be called before <code>Wizard::withEvents()</code></p>
             <p>See also:</p>
             <list>
-                <li><a href="Wizard.topic#withevents">Wizard::withEvents()</a></li>
+                <li><p><a href="Wizard.topic#withevents">Wizard::withEvents()</a></p></li>
             </list>
             <code-block lang="php">
             public function withStepTimeout(int $stepTimeout): self

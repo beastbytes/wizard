@@ -66,7 +66,7 @@
             <p>Returns a map that defines which branches are enabled and/or disabled.</p>
             <p>See also:</p>
             <list>
-                <li><a href="Step-Event.topic" anchor="setbranches">setBranches()</a></li>
+                <li><p><a href="Step-Event.topic" anchor="setbranches">setBranches()</a></p></li>
             </list>
             <code-block lang="php">
             public function getBranches(): array
@@ -83,8 +83,8 @@
             <p>Returns the data for the current step.</p>
             <p>See also:</p>
             <list>
-                <li><a href="Step-Event.topic" anchor="hasdata">hasData()</a></li>
-                <li><a href="Step-Event.topic" anchor="setdata">setData()</a></li>
+                <li><p><a href="Step-Event.topic" anchor="hasdata">hasData()</a></p></li>
+                <li><p><a href="Step-Event.topic" anchor="setdata">setData()</a></p></li>
             </list>
             <code-block lang="php">
             public function getData(): array
@@ -101,7 +101,7 @@
             <p>Return which step Wizard is to process next.</p>
             <p>See also:</p>
             <list>
-                <li><a href="Step-Event.topic" anchor="setgoto">setGoto()</a></li>
+                <li><p><a href="Step-Event.topic" anchor="setgoto">setGoto()</a></p></li>
             </list>
             <code-block lang="php">
             public function getGoto(): int|string
@@ -123,8 +123,8 @@
         <chapter title="hasData()" id="hasdata">
             <p>See also:</p>
             <list>
-                <li><a href="Step-Event.topic" anchor="getdata">getData()</a></li>
-                <li><a href="Step-Event.topic" anchor="setdata">setData()</a></li>
+                <li><p><a href="Step-Event.topic" anchor="getdata">getData()</a></p></li>
+                <li><p><a href="Step-Event.topic" anchor="setdata">setData()</a></p></li>
             </list>
             <code-block lang="php">
             public function hasData(): bool
@@ -142,7 +142,7 @@
         <chapter title="setBranches()" id="setbranches">
             <p>See also:</p>
             <list>
-                <li><a href="Step-Event.topic" anchor="getbranches">getBranches()</a></li>
+                <li><p><a href="Step-Event.topic" anchor="getbranches">getBranches()</a></p></li>
             </list>
             <code-block lang="php">
             public function setBranches(array $branches): void
@@ -171,8 +171,8 @@
             <p>Set the data for the current step.</p>
             <p>See also:</p>
             <list>
-                <li><a href="Step-Event.topic" anchor="getdata">getData()</a></li>
-                <li><a href="Step-Event.topic" anchor="hasdata">hasData()</a></li>
+                <li><p><a href="Step-Event.topic" anchor="getdata">getData()</a></p></li>
+                <li><p><a href="Step-Event.topic" anchor="hasdata">hasData()</a></p></li>
             </list>
             <code-block lang="php">
             public function setData(mixed $data): void
@@ -196,7 +196,7 @@
             <p>Set which step the Wizard should process next.</p>
             <p>See also:</p>
             <list>
-                <li><a href="Step-Event.topic" anchor="getgoto">getGoto()</a></li>
+                <li><p><a href="Step-Event.topic" anchor="getgoto">getGoto()</a></p></li>
             </list>
             <code-block lang="php">
             public function setGoto(int|string $goto): void

@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE topic
+        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
+<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
+       title="Basic Example" id="Basic-Example">
+
+    <p>This is a simple example with three steps.</p>
+
+    <code-block lang="php">
+    declare(strict_types=1);
+
+    namespace BeastBytes\Wizard\Event;
+
+    use BeastBytes\Wizard\Event\AfterWizard;
+    use BeastBytes\Wizard\Event\StepHandlerTrait;
+    use BeastBytes\Wizard\Wizard;
+    use BeastBytes\Wizard\WizardInterface;
+    use Psr\Http\Message\ResponseFactoryInterface;
+    use Psr\Http\Message\ResponseInterface;
+    use Psr\Http\Message\ServerRequestInterface;
+    use Yiisoft\FormModel\FormHydrator;
+    use Yiisoft\Http\Header;
+    use Yiisoft\Http\Status;
+    use Yiisoft\Router\UrlGeneratorInterface;
+    use Yiisoft\Yii\View\ViewRenderer;
+
+    class MyController
+    {
+        private const WIZARD_STEPS = ['step_1', 'step_2', 'step_3'];
+
+        use StepHandlerTrait; // passes Step event to methods with the same name as the current step
+
+        public function __construct(
+            private ResponseFactoryInterface $responseFactory,
+            private UrlGeneratorInterface $urlGenerator,
+            private ViewRenderer $viewRenderer
+        )
+        {
+            $this->viewRenderer = $this
+                ->viewRenderer
+                ->withController($this)
+            ;
+        }
+
+        public function wizard(
+            ServerRequestInterface $request,
+            WizardInterface $wizard
+        ): ResponseInterface
+        {
+            return $wizard
+                -&gt;withEvents([
+                    [$this, 'afterWizardHandler'],
+                    [$this, 'stepHandler'],
+                ])
+                -&gt;withForwardOnly(Wizard::FORWARD_ONLY)
+                -&gt;withSteps(self::WIZARD_STEPS)
+                -&gt;step($request)
+            ;
+        }
+
+        public function afterWizardHandler(AfterWizard $event)
+        {
+            /*
+             * $data is a map
+             * keys are the step names
+             * value for each key is the data for that step
+             */
+            $data = $event
+                ->getWizard()
+                ->getData()
+            ;
+
+            // Do whatever needs doing with the data, e.g. persist to a database
+
+            // When done set a redirect response in the event
+            $event
+                ->setResponse(
+                    $this
+                        ->responseFactory
+                        ->createResponse(Status::FOUND)
+                        ->withHeader(
+                            Header::LOCATION,
+                            $this
+                                ->urlGenerator
+                                ->generate('wizard_complete') // redirect to a new URL
+                        )
+
+                )
+            ;
+        }
+
+        private function step_1(StepEvent $event): void
+        {
+            $formModel = new Step1Form(); // instanceof \Yiisoft\FormModel\FormModelInterface
+
+            if (
+                $this
+                    ->formHydrator
+                    ->populateFromPostAndValidate(
+                        $formModel,
+                        $event->getRequest()
+                    )
+            ) {
+                $data = $formModel->getData();
+                $event->setData($data);
+                return;
+            }
+
+            $response = $this
+                ->viewRenderer
+                ->render(
+                    'step_1', // an ordinary view file
+                    [
+                        'formModel' => $formModel,
+                    ]
+                )
+            ;
+
+            $event->setResponse($response);
+        }
+
+        private function step_2(StepEvent $event): void
+        {
+            $formModel = new Step2Form(); // instanceof \Yiisoft\FormModel\FormModelInterface
+
+            if (
+                $this
+                    ->formHydrator
+                    ->populateFromPostAndValidate(
+                        $formModel,
+                        $event->getRequest()
+                    )
+            ) {
+                $data = $formModel->getData();
+                $event->setData($data);
+                return;
+            }
+
+            $response = $this
+                ->viewRenderer
+                ->render(
+                    'step_2',
+                    [
+                        'formModel' => $formModel,
+                    ]
+                )
+            ;
+
+            $event->setResponse($response);
+        }
+
+        private function step_3(StepEvent $event): void
+        {
+            $formModel = new Step3Form(); // instanceof \Yiisoft\FormModel\FormModelInterface
+
+            if (
+                $this
+                    ->formHydrator
+                    ->populateFromPostAndValidate(
+                        $formModel,
+                        $event->getRequest()
+                    )
+            ) {
+                $data = $formModel->getData();
+                $event->setData($data);
+                return;
+            }
+
+            $response = $this
+                ->viewRenderer
+                ->render(
+                    'step_3',
+                    [
+                        'formModel' => $formModel,
+                    ]
+                )
+            ;
+
+            $event->setResponse($response);
+        }
+    }
+</code-block>
+</topic>

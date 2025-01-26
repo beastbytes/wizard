@@ -8,13 +8,13 @@
     <p>Wizard simplifies the handling of multistep forms.</p>
     <chapter title="Features" id="features">
         <list>
-            <li>All forms submit to the same controller/action</li>
-            <li>Allow returning to earlier steps or enforce forward only navigation</li>
-            <li>Looping - repeat one or more steps as many times as needed</li>
-            <li>Plot Branching Navigation (PBN) - decide which path to take depending on the user's response</li>
-            <li>Step Timeout - steps can have a timeout to ensure a user responds within a given time</li>
-            <li>Pause/resume - save partially completed Wizards; restore and continue from that point</li>
-            <li>Event driven - write the handler functions and hook them up to Wizard events</li>
+            <li><p>All forms submit to the same controller/action</p></li>
+            <li><p>Allow returning to earlier steps or enforce forward only navigation</p></li>
+            <li><p>Looping - repeat one or more steps as many times as needed</p></li>
+            <li><p>Plot Branching Navigation (PBN) - decide which path to take depending on the user's response</p></li>
+            <li><p>Step Timeout - steps can have a timeout to ensure a user responds within a given time</p></li>
+            <li><p>Pause/resume - save partially completed Wizards; restore and continue from that point</p></li>
+            <li><p>Event driven - write the handler functions and hook them up to Wizard events</p></li>
         </list>
     </chapter>
     <chapter title="Installation" id="installation">

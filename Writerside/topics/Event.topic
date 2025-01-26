@@ -7,14 +7,14 @@
 
     <p>This section gives details of the events raised by Wizard:</p>
     <list>
-        <li><a href="AfterWizard-Event.topic">AfterWizard event</a></li>
-        <li><a href="BeforeWizard-Event.topic">BeforeWizard event</a></li>
-        <li><a href="Step-Event.topic">Step event</a></li>
-        <li><a href="StepExpired-Event.topic">StepExpired event</a></li>
+        <li><p><a href="AfterWizard-Event.topic">AfterWizard event</a></p></li>
+        <li><p><a href="BeforeWizard-Event.topic">BeforeWizard event</a></p></li>
+        <li><p><a href="Step-Event.topic">Step event</a></p></li>
+        <li><p><a href="StepExpired-Event.topic">StepExpired event</a></p></li>
     </list>
     <p>and the classes that the events inherit from and use:</p>
     <list>
-        <li><a href="Base-Event.topic">BaseEvent</a></li>
-        <li><a href="ResponseTrait.topic">ResponseTrait</a></li>
+        <li><p><a href="Base-Event.topic">BaseEvent</a></p></li>
+        <li><p><a href="ResponseTrait.topic">ResponseTrait</a></p></li>
     </list>
 </topic>

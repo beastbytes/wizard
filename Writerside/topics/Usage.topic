@@ -3,7 +3,7 @@
         SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
 <topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
-       title="Useage" id="Useage">
+       title="Useage" id="Usage" help-id="Useage">
     <p>Wizard is used in a Controller; it uses a single action that all steps use to render and submit forms,
         greatly simplifying routing - there is only one route for a Wizard.</p>
 

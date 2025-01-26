@@ -100,7 +100,7 @@
             <p>Returns a value indicating whether event propagation is stopped.</p>
             <p>See also:</p>
             <list>
-                <li><a href="Base-Event.topic" anchor="stoppropagation">stopPropagation()</a></li>
+                <li><p><a href="Base-Event.topic" anchor="stoppropagation">stopPropagation()</a></p></li>
             </list>
             <code-block lang="php">
             public function isPropagationStopped(): bool
@@ -122,7 +122,7 @@
             <p>Returns a value indicating whether the Wizard is stopped</p>
             <p>See also:</p>
             <list>
-                <li><a href="Base-Event.topic" anchor="stopwizard">stopWizard()</a></li>
+                <li><p><a href="Base-Event.topic" anchor="stopwizard">stopWizard()</a></p></li>
             </list>
             <code-block lang="php">
             public function isWizardStopped(): bool
@@ -152,7 +152,7 @@
             <p>Stops the Wizard.</p>
             <p>See also:</p>
             <list>
-                <li><a href="Base-Event.topic" anchor="iswizardstopped">isWizardStopped()</a></li>
+                <li><p><a href="Base-Event.topic" anchor="iswizardstopped">isWizardStopped()</a></p></li>
             </list>
             <code-block lang="php">
             public function stopWizard(): void

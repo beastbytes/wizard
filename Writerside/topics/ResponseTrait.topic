@@ -44,7 +44,7 @@
             <p>Returns the response.</p>
             <p>See also:</p>
             <list>
-                <li><a href="ResponseTrait.topic#setresponse">setResponse()</a></li>
+                <li><p><a href="ResponseTrait.topic#setresponse">setResponse()</a></p></li>
             </list>
             <code-block lang="php">
             public function getResponse(): ?ResponseInterface
@@ -62,7 +62,7 @@
             <p>Sets the response.</p>
             <p>See also:</p>
             <list>
-                <li><a href="ResponseTrait.topic#getresponse">getResponse()</a></li>
+                <li><p><a href="ResponseTrait.topic#getresponse">getResponse()</a></p></li>
             </list>
             <code-block lang="php">
             public function setResponse(ResponseInterface $response): self

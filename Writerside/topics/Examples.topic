@@ -5,5 +5,9 @@
        xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
        title="Examples" id="Examples">
 
-    <p>This section contains examples with explanations.</p>
+    <p>This section contains examples of using Wizard.</p>
+    <list>
+        <li><p><a href="Basic-Example.topic"/></p></li>
+        <li></li>
+    </list>
 </topic>

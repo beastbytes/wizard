@@ -7,12 +7,14 @@
                  start-page="About-Wizard.topic">
 
     <toc-element topic="About-Wizard.topic"/>
-    <toc-element topic="Useage.topic"/>
     <toc-element topic="Events.topic">
         <toc-element topic="Step-Event-Handler.topic"/>
     </toc-element>
-    <toc-element topic="Examples.topic"/>
-    <toc-element topic="API.md">
+    <toc-element topic="Usage.topic"/>
+    <toc-element topic="Examples.topic">
+        <toc-element topic="Basic-Example.topic"/>
+    </toc-element>
+    <toc-element topic="API.topic">
         <toc-element topic="Wizard.topic">
         </toc-element>
         <toc-element topic="Event.topic">
