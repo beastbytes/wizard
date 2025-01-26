@@ -3,7 +3,7 @@
         SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
 <topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
        xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
-       title="BeforeWizard Event" id="BeforeWizard-Event" help-id="BeforeWizard">
+       title="BeforeWizard Event" id="BeforeWizard-Event">
 
     <p>The BeforeWizard event is raised before the Wizard has processed any steps.</p>
     <table id="inheritance">

@@ -14,6 +14,7 @@
     <toc-element topic="Plot-Branching-Navigation.topic"/>
     <toc-element topic="Examples.topic">
         <toc-element topic="Basic-Example.topic"/>
+        <toc-element topic="Repeat-Step-Example.topic"/>
     </toc-element>
     <toc-element topic="API.topic">
         <toc-element topic="Wizard.topic">
