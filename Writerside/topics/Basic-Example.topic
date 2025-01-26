@@ -7,7 +7,7 @@
 
     <p>This is a simple example with three steps.</p>
 
-    <code-block lang="php">
+    <code-block lang="php" noinject="true">
     declare(strict_types=1);
 
     namespace BeastBytes\Wizard\Event;
@@ -29,7 +29,8 @@
     {
         private const WIZARD_STEPS = ['step_1', 'step_2', 'step_3'];
 
-        use StepHandlerTrait; // passes Step event to methods with the same name as the current step
+        // passes Step event to methods with the same name as the current step
+        use StepHandlerTrait;
 
         public function __construct(
             private ResponseFactoryInterface $responseFactory,

@@ -153,6 +153,10 @@
     <chapter title="Method Details" id="method-details">
         <chapter title="getCurrentStep()" id="getcurrentstep">
             <p>Returns the name of the current step.</p>
+            <p>See also:</p>
+            <list>
+                <li><p><a href="Wizard.topic#getsteps">Wizard::getSteps()</a></p></li>
+            </list>
             <code-block lang="php">
             public function getCurrentStep(): string
             </code-block>
@@ -200,6 +204,7 @@
             <p>The list may change as steps are processed due to Plot Branching.</p>
             <p>See also:</p>
             <list>
+                <li><p><a href="Wizard.topic#getcurrentstep">Wizard::getCurrentStep()</a></p></li>
                 <li><p><a href="Wizard.topic#withsteps">Wizard::withSteps()</a></p></li>
             </list>
             <code-block lang="php">
