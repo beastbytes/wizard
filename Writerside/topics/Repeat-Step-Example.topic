@@ -225,5 +225,5 @@
             $event->setResponse($response);
         }
     }
-</code-block>
+    </code-block>
 </topic>

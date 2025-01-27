@@ -36,25 +36,35 @@
         </list>
         <p>The <emphasis>only</emphasis> restriction is that the first entry must be a <emphasis>step</emphasis>.</p>
 
-        <p>Using the car example, the <emphasis>steps array</emphasis> might look something like:</p>
-        <code-block lang="php">
-            $steps = [
-                'make',
-                'model',
-                'fuel',
-                [
-                    'fossil' => [
-                        'tank_capacity',
-                        'consumption',
+        <chapter title="ABNF Definition of Steps Array" id="abnf-definition-of-steps-array">
+            <p>c = "_" / ALPHA</p>
+            <p>Step = c *(c / DIGIT)</p>
+            <p>BranchName = 1*(c / DIGIT / "-")</p>
+            <p>Branch = "[" 1*(BranchName "=>[" 1*(Step / Branch) "],") "]"</p>
+            <p>StepsArray = "[" Step "," *(Step / Branch ",") "]"</p>
+        </chapter>
+
+        <chapter title="Example Steps Array" id="example-steps-array">
+            <p>Using the car example, the <emphasis>steps array</emphasis> might look something like:</p>
+            <code-block lang="php">
+                $steps = [
+                    'make',
+                    'model',
+                    'fuel',
+                    [
+                        'fossil' => [
+                            'tank_capacity',
+                            'consumption',
+                        ],
+                        'electric' => [
+                            'battery_capacity',
+                            'home_charging',
+                        ]
                     ],
-                    'electric' => [
-                        'battery_capacity',
-                        'home_charging',
-                    ]
-                ],
-                'range'
-            ];
-        </code-block>
+                    'range'
+                ];
+            </code-block>
+        </chapter>
 
         <chapter title="Deciding on the Branch to Use" id="deciding-on-the-branch-to-use">
             <p>Deciding which branch to use is done in the Step event handler.</p>

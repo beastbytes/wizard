@@ -518,7 +518,7 @@
         </chapter>
 
         <chapter title="withStepTimeout()" id="withsteptimeout">
-            <p>Sets the step timeout in seconds.</p>
+            <p>Sets the step timeout in seconds; 0 means no timeout.</p>
             <p>If a step is not processed within the step timeout period a StepExpired event is raised.</p>
             <p>If used, this method <b>must</b> be called before <code>Wizard::withEvents()</code></p>
             <p>See also:</p>

@@ -8,37 +8,38 @@
         greatly simplifying routing - there is only one route for a Wizard.</p>
 
     <code-block lang="php" noinject="true">
-class MyController
-{
-    private const WIZARD_STEPS = ['step_1', 'step_2', 'step_3'];
-
-    public function wizard(
-        ServerRequestInterface $request,
-        WizardInterface $wizard
-    ): ResponseInterface
+    class MyController
     {
-        return $wizard
-            -&gt;withEvents([
-                [$this, 'afterWizardHandler'],
-                [$this, 'stepHandler'],
-            ])
-            -&gt;withForwardOnly(Wizard::FORWARD_ONLY)
-            -&gt;withSteps(self::WIZARD_STEPS)
-            -&gt;step($request)
-        ;
-    }
+        private const WIZARD_STEPS = ['step_1', 'step_2', 'step_3'];
 
-    public function afterWizardHandler(AfterWizard $event)
-    {
-        // Handle AfterWizard event
-    }
+        public function wizard(
+            ServerRequestInterface $request,
+            WizardInterface $wizard
+        ): ResponseInterface
+        {
+            return $wizard
+                -&gt;withEvents([
+                    [$this, 'afterWizardHandler'],
+                    [$this, 'stepHandler'],
+                ])
+                -&gt;withForwardOnly(Wizard::FORWARD_ONLY)
+                -&gt;withSteps(self::WIZARD_STEPS)
+                -&gt;step($request)
+            ;
+        }
 
-    public function stepHandler(Step $event)
-    {
-        // Handle AfterWizard event
+        public function afterWizardHandler(AfterWizard $event)
+        {
+            // Handle AfterWizard event
+        }
+
+        public function stepHandler(Step $event)
+        {
+            // Handle AfterWizard event
+        }
     }
-}
-</code-block>
+    </code-block>
+
     <p>The above example does the following:</p>
     <list>
         <li>
@@ -57,4 +58,106 @@ class MyController
             Declares the AfterWizard and Step event handlers.
         </li>
     </list>
+
+    <chapter title="Required Settings" id="required-settings">
+        <deflist>
+            <def title="Events" id="events">
+                <a href="Wizard.topic#withevents">
+                    <code>public function withEvents(array $events)</code>
+                </a>
+                <p>Defines the event handlers for Wizard.</p>
+                <p>
+                    The array keys are the FQCN of the event, and the value is a callable to the event handler;
+                    see the example below.
+                </p>
+                <code-block lang="php">
+                    [
+                        AfterWizard::class => [$this, 'afterWizardEventHandler'],
+                        BeforeWizard::class => [$this, 'beforeWizardEventHandler'],
+                        Step::class => [$this, 'stepEventHandler'],
+                        StepExpired::class => [$this, 'stepExpiredEventHandler'],
+                    ]
+                </code-block>
+                <p>
+                    The AfterWizard and Step event handlers <emphasis>must</emphasis> be given,<br/>
+                    the StepExpired handler must be given if a step timeout has been specified,<br/>
+                    the BeforeWizard handler is optional.
+                </p>
+            </def>
+            <def title="Steps" id="steps">
+                <a href="Wizard.topic#withsteps">
+                    <code>public function withSteps(array $steps)</code>
+                </a>
+                <p>The steps array.</p>
+                <p>
+                    At its simplest, the steps array is a list of steps for Wizard to process.
+                    Wizard supports <a href="Plot-Branching-Navigation.topic">Plot Branching Navigation</a>,
+                    enabling Wizard to process different steps in the steps array depending on user input;
+                    in this case the steps array becomes a bit more complex.
+                </p>
+            </def>
+        </deflist>
+    </chapter>
+
+    <chapter title="Wizard Options" id="wizard-options">
+        <deflist>
+            <def title="Auto Advance" id="auto-advance">
+                <a href="Wizard.topic#withautoadvance">
+                    <code>public function withAutoAdvance(bool $autoAdvance)</code>
+                </a>
+                <p>Determines what the next step will be if the user has returned to an earlier step</p>
+                <p>true (default): The first unprocessed step.</p>
+                <p>false: The next step in the steps array.</p>
+            </def>
+            <def title="Default Branch" id="default-branch">
+                <a href="Wizard.topic#withdefaultbranch">
+                    <code>public function withDefaultBranch(bool $defaultBranch)</code>
+                </a>
+                <p>
+                    Determines whether Wizard will process the default - first - branch in a branch group
+                    or a branch group is skipped unless a branch is specifically enabled.
+                </p>
+                <p>true (default): The default - first - branch in a branch group is processed.</p>
+                <p>false: A branch group is skipped unless a branch is specifically enabled.</p>
+            </def>
+            <def title="Forward Only" id="forward-only">
+                <a href="Wizard.topic#withforwardonly">
+                    <code>public function withForwardOnly(bool $forwardOnly)</code>
+                </a>
+                <p>Whether the user csn return to earlier steps.</p>
+                <p>true : Disallow returning to earlier steps. Repeating the current step is allowed.</p>
+                <p>false (default): Allow returning to earlier steps.</p>
+            </def>
+            <def title="Session Key" id="session-key">
+                <a href="Wizard.topic#withsessionkey">
+                    <code>public function withSessionKey(string $sessionKey)</code>
+                </a>
+                <p>Sets the session key for the Wizard instance; defailt "__wizard".</p>
+                <p>The session key only needs to be changed if the default key is used by something else.</p>
+            </def>
+            <def title="Step Parameter" id="step-parameter">
+                <a href="Wizard.topic#withstepparameter">
+                    <code>public function withStepParameter(string $stepParameter)</code>
+                </a>
+                <p>Sets the step parameter as defined in the Route; default "" (empty string)</p>
+                <p>Using the default, URLs will be of the form "https::example.com/wizard".</p>
+                <p>
+                    If the parameter is set, URLs include the step name:
+                    "https::example.com/wizard/step_1",
+                    "https::example.com/wizard/step_2",
+                    "https::example.com/wizard/step_3", etc.
+                </p>
+            </def>
+            <def title="Step Timeout" id="step-timeout">
+                <a href="Wizard.topic#withsteptimeout">
+                    <code>public function withStepTimeout(int $stepTimeout)</code>
+                </a>
+                <p>
+                    Sets a step timeout in seconds; default 0 (no timeout).
+                    If a step is not processed within the timeout period a StepExpired event is raised.
+                </p>
+                <p>This option <emphasis>must</emphasis> be set before setting the event handlers.</p>
+            </def>
+        </deflist>
+    </chapter>
 </topic>
