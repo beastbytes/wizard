@@ -26,5 +26,4 @@
         </code-block>
         <p>or run <code>php composer . phar require -dev &quot;beastbytes/wizard:*&quot;</code></p>
     </chapter>
-
 </topic>
