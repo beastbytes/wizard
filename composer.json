@@ -3,6 +3,7 @@
     "type": "library",
     "description": "Multi-part form handler",
     "keywords": [
+        "yii3",
         "form",
         "multi-part",
         "steps",
