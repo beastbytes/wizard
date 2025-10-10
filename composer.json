@@ -31,7 +31,7 @@
         "yiisoft/data-response": "^2.0",
         "yiisoft/friendly-exception": "^1.0",
         "yiisoft/router-fastroute": "^4.0",
-        "yiisoft/session": "^2.0",
+        "yiisoft/session": "^3.0",
         "yiisoft/yii-http": "^1.0"
     },
     "require-dev": {
