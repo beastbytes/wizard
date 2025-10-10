@@ -19,7 +19,6 @@ use Generator;
 use HttpSoft\Message\Response;
 use HttpSoft\Message\ResponseFactory;
 use HttpSoft\Message\ServerRequest;
-use HttpSoft\Message\UriFactory;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -1221,9 +1220,10 @@ class WizardTest extends TestCase
         ;
         $routes = [$route];
         $routeCollection = $this->createRouteCollection($routes);
+
         $currentRoute = new CurrentRoute();
-        $uri = (new UriFactory())->createUri(self::URI);
-        $currentRoute->setRouteWithArguments($route, ['step']);
+        $currentRoute->setRouteWithArguments($route, []);
+
         return new UrlGenerator($routeCollection, $currentRoute);
     }
 
@@ -1231,7 +1231,7 @@ class WizardTest extends TestCase
     {
         $rootGroup = Group::create()->routes(...$routes);
         $collector = new RouteCollector();
-        $collector->addGroup($rootGroup);
+        $collector->addRoute($rootGroup);
         return new RouteCollection($collector);
     }
 
