@@ -1,6 +1,11 @@
 # phpstorm project files
 .idea
 
+# Sphinx
+/docs/build
+# Python Virtual Envirnment
+.venv
+
 # netbeans project files
 nbproject
 
