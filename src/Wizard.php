@@ -1,8 +1,4 @@
 <?php
-/**
- * @copyright Copyright © 2024 BeastBytes - All rights reserved
- * @license BSD 3-Clause
- */
 
 declare(strict_types=1);
 
@@ -29,6 +25,10 @@ use Yiisoft\Router\UrlGeneratorInterface;
 use Yiisoft\Session\SessionInterface;
 use Yiisoft\Strings\Inflector;
 
+/**
+ * @template TBranchGroup of array<string, string|TBranchGroup>
+ */
+
 final class Wizard implements WizardInterface
 {
     public const AUTO_ADVANCE = true;
@@ -39,7 +39,6 @@ final class Wizard implements WizardInterface
     public const DIRECTION_REPEAT = 0;
     public const DEFAULT_BRANCH = true;
     public const FORWARD_ONLY = true;
-    public const STEP_PARAMETER = 'step';
     private const AFTER_WIZARD_EVENT_NOT_SET = 'AfterWizard event not set';
     private const AFTER_WIZARD_EVENT_NOT_SET_INFO = 'Set AfterWizard event using the withEvents() method';
     private const EVENTS_NOT_SET_EXCEPTION = '"events" not set';
@@ -69,7 +68,7 @@ final class Wizard implements WizardInterface
     /**
      * @var bool
      *
-     * If TRUE, the behavior will redirect to the "expected step" after a step has been successfully completed.
+     * If TRUE, Wizard will redirect to the "expected step" after a step has been successfully completed.
      * If FALSE, it will redirect to the next step in the steps array.
      *
      * The difference between the "expected step" and the "next step" is when the user goes to a previous step in the
@@ -94,7 +93,7 @@ final class Wizard implements WizardInterface
      */
     private array $sessionData = [];
     private array $steps = [];
-    private string $stepParameter = '';
+    private ?string $stepParameter = null;
     /**
      * @var int Step timeout in seconds
      */
@@ -107,10 +106,10 @@ final class Wizard implements WizardInterface
     private string $stepTimeoutKey = '';
 
     public function __construct(
-        private Inflector $inflector,
-        private ResponseFactoryInterface $responseFactory,
-        private SessionInterface $session,
-        private UrlGeneratorInterface $urlGenerator
+        private readonly Inflector $inflector,
+        private readonly ResponseFactoryInterface $responseFactory,
+        private readonly SessionInterface $session,
+        private readonly UrlGeneratorInterface $urlGenerator
     )
     {
         $this->setKeyNames();
@@ -124,7 +123,7 @@ final class Wizard implements WizardInterface
         if (!$this->hasStarted()) {
             if ($this->start()) {
                 return $this // ensure the first step shows the step parameter if it is used
-                ->responseFactory
+                    ->responseFactory
                     ->createResponse(Status::FOUND)
                     ->withHeader(
                         Header::LOCATION,
@@ -221,9 +220,8 @@ final class Wizard implements WizardInterface
     }
 
     /**
-     * @param array $events
-     * @psalm-param non-empty-array<string, callable> $events
-     * @return $this
+     * @param array<string, callable> $events
+     * @return self
      * @throws InvalidConfigException
      */
     public function withEvents(array $events): self
@@ -250,6 +248,7 @@ final class Wizard implements WizardInterface
         $new = clone $this;
         $listeners = new ListenerCollection();
 
+        /** @var callable $listener */
         foreach ($events as $name => $listener) {
             $listeners = $listeners->add($listener, $name);
         }
@@ -276,6 +275,10 @@ final class Wizard implements WizardInterface
         return $new;
     }
 
+    /**
+     * @param array{string, ...string|TBranchGroup} $steps
+     * @return self
+     */
     public function withSteps(array $steps): self
     {
         $new = clone $this;
@@ -311,12 +314,12 @@ final class Wizard implements WizardInterface
     public function reset(): void
     {
         foreach ([
-                     $this->branchKey,
-                     $this->dataKey,
-                     $this->repetitionIndexKey,
-                     $this->stepsKey,
-                     $this->stepTimeoutKey,
-                 ] as $key) {
+            $this->branchKey,
+            $this->dataKey,
+            $this->repetitionIndexKey,
+            $this->stepsKey,
+            $this->stepTimeoutKey,
+        ] as $key) {
             $this
                 ->session
                 ->remove($key)
@@ -365,7 +368,7 @@ final class Wizard implements WizardInterface
                 ->session
                 ->get($this->stepsKey)
             : []
-            ;
+        ;
     }
 
     /**
@@ -374,12 +377,12 @@ final class Wizard implements WizardInterface
     public function pause(): string
     {
         foreach ([
-                     $this->branchKey,
-                     $this->currentStepKey,
-                     $this->dataKey,
-                     $this->repetitionIndexKey,
-                     $this->stepsKey,
-                 ] as $sessionKey) {
+            $this->branchKey,
+            $this->currentStepKey,
+            $this->dataKey,
+            $this->repetitionIndexKey,
+            $this->stepsKey,
+        ] as $sessionKey) {
             $this->sessionData[$sessionKey] = $this
                 ->session
                 ->get($sessionKey)
@@ -445,8 +448,7 @@ final class Wizard implements WizardInterface
     /**
      * Enable or disable branch(es).
      *
-     * @param non-empty-array<string, int> $directives Branches as ["branch name" => branchDirective]
-     * [key => value]  pairs.
+     * @param array{string, int} $directives Branches as ["branch name" => branchDirective]
      * branchDirective = Wizard::BRANCH_DISABLED | Wizard::BRANCH_ENABLED
      */
     private function branch(array $directives): void
@@ -658,7 +660,7 @@ final class Wizard implements WizardInterface
 
     private function getStepParameter(): array
     {
-        if ($this->stepParameter) {
+        if (is_string($this->stepParameter)) {
             /** @var int $repetitionIndex */
             $repetitionIndex = $this
                 ->session
