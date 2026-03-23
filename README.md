@@ -10,16 +10,6 @@ Wizard simplifies the handling of multistep forms.
 * Pause/resume - save partially completed Wizards; restore and continue from that point
 * Event driven - write the handler functions and hook them up to Wizard events
 
-## Installation
-Install Wizard using [Composer](https://getcomposer.org/)
+For license information see the [LICENSE](license.md) file
 
-Add the following to the <i>require</i> section of your composer.json:
-
-```json
-"beastbytes/wizard": "*"
-```
- 
-or run 
-```php
-php composer.phar require -dev "beastbytes/wizard:*"
-```
+Documentation is at (https://beastbytes.github.io/wizard/)
