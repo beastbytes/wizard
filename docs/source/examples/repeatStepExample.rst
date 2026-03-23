@@ -1,32 +1,8 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
-<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
-       title="Basic Example" id="Basic-Example">
-
-    <p>This is a simple example with three steps.</p>
-
-    <code-block lang="php" noinject="true">
-    declare(strict_types=1);
-
-    namespace BeastBytes\Wizard\Event;
-
-    use BeastBytes\Wizard\Event\AfterWizard;
-    use BeastBytes\Wizard\Event\StepHandlerTrait;
-    use BeastBytes\Wizard\Wizard;
-    use BeastBytes\Wizard\WizardInterface;
-    use Psr\Http\Message\ResponseFactoryInterface;
-    use Psr\Http\Message\ResponseInterface;
-    use Psr\Http\Message\ServerRequestInterface;
-    use Yiisoft\FormModel\FormHydrator;
-    use Yiisoft\Http\Header;
-    use Yiisoft\Http\Status;
-    use Yiisoft\Router\UrlGeneratorInterface;
-    use Yiisoft\Yii\View\ViewRenderer;
+.. code-block:: php
 
     class MyController
     {
+        private const MAX_STEP2 = 3;
         private const WIZARD_STEPS = ['step_1', 'step_2', 'step_3'];
 
         // pass Step event to methods with the same name as the current step
@@ -50,13 +26,13 @@
         ): ResponseInterface
         {
             return $wizard
-                -&gt;withEvents([
+                ->withEvents([
                     [$this, 'afterWizardHandler'],
                     [$this, 'stepHandler'],
                 ])
-                -&gt;withForwardOnly(Wizard::FORWARD_ONLY)
-                -&gt;withSteps(self::WIZARD_STEPS)
-                -&gt;step($request)
+                ->withForwardOnly(Wizard::FORWARD_ONLY)
+                ->withSteps(self::WIZARD_STEPS)
+                ->step($request)
             ;
         }
 
@@ -85,7 +61,7 @@
                             Header::LOCATION,
                             $this
                                 ->urlGenerator
-                                ->generate('wizard_complete') // redirect to a new URL
+                                ->generate('wizard_complete')
                         )
 
                 )
@@ -123,6 +99,7 @@
             $event->setResponse($response);
         }
 
+        // This step can repeat
         private function step_2(StepEvent $event): void
         {
             $formModel = new Step2Form();
@@ -136,7 +113,40 @@
                     )
             ) {
                 $data = $formModel->getData();
+
+                // Set the data in the normal way
                 $event->setData($data);
+
+                /*
+                 * The form has a submit button called `add` as well as the normal submit button.
+                 * If `add` was used to submit the form and max count has not been reached repeat the step.
+                 */
+                $wizard = $event->getWizard();
+
+                $currentStep = $wizard->getCurrentStep();
+                $stepData = $wizard->getData($currentStep);
+
+                /*
+                 * The format of step data is application specific so the application must check
+                 * how many repetitions there have been.
+                 * If more than one step's data has been saved the data is an array of step data.
+                 * If the application saves form data "as is" - an array of key=>value pairs,
+                 * if the first key is a string the count is 1,
+                 * if the first key is an int the count is the size of the array,
+                 * plus 1 for the data from this repetition
+                 */
+                $maxCountReached = $this
+                    ->isMaxCountReached(
+                        $currentStep,
+                        $stepData
+                    )
+                ;
+
+                // Repeat the step if allowed
+                if (!$maxCountReached && $form->getAdd()) {
+                    $event->setGoto(WIZARD::DIRECTION_REPEAT);
+                }
+
                 return;
             }
 
@@ -183,5 +193,3 @@
             $event->setResponse($response);
         }
     }
-</code-block>
-</topic>

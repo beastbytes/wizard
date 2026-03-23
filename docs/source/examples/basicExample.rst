@@ -1,36 +1,10 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE topic
-        SYSTEM "https://resources.jetbrains.com/writerside/1.0/xhtml-entities.dtd">
-<topic xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-       xsi:noNamespaceSchemaLocation="https://resources.jetbrains.com/writerside/1.0/topic.v2.xsd"
-       title="Repeat Step Example" id="Repeat-Step-Example">
-
-    <p>In this example step_2 is repeated a number of times.</p>
-
-    <code-block lang="php" noinject="true">
-    declare(strict_types=1);
-
-    namespace BeastBytes\Wizard\Event;
-
-    use BeastBytes\Wizard\Event\AfterWizard;
-    use BeastBytes\Wizard\Event\StepHandlerTrait;
-    use BeastBytes\Wizard\Wizard;
-    use BeastBytes\Wizard\WizardInterface;
-    use Psr\Http\Message\ResponseFactoryInterface;
-    use Psr\Http\Message\ResponseInterface;
-    use Psr\Http\Message\ServerRequestInterface;
-    use Yiisoft\FormModel\FormHydrator;
-    use Yiisoft\Http\Header;
-    use Yiisoft\Http\Status;
-    use Yiisoft\Router\UrlGeneratorInterface;
-    use Yiisoft\Yii\View\ViewRenderer;
+.. code-block:: php
 
     class MyController
     {
-        private const MAX_STEP2 = 3;
         private const WIZARD_STEPS = ['step_1', 'step_2', 'step_3'];
 
-        // pass Step event to methods with the same name as the current step
+        // Pass Step event to methods with the same name as the current step
         use StepHandlerTrait;
 
         public function __construct(
@@ -51,13 +25,13 @@
         ): ResponseInterface
         {
             return $wizard
-                -&gt;withEvents([
+                ->withEvents([
                     [$this, 'afterWizardHandler'],
                     [$this, 'stepHandler'],
                 ])
-                -&gt;withForwardOnly(Wizard::FORWARD_ONLY)
-                -&gt;withSteps(self::WIZARD_STEPS)
-                -&gt;step($request)
+                ->withForwardOnly(Wizard::FORWARD_ONLY)
+                ->withSteps(self::WIZARD_STEPS)
+                ->step($request)
             ;
         }
 
@@ -86,14 +60,17 @@
                             Header::LOCATION,
                             $this
                                 ->urlGenerator
-                                ->generate('wizard_complete')
+                                ->generate('wizard_complete') // redirect to a new URL
                         )
 
                 )
             ;
         }
 
-        private function step_1(StepEvent $event): void
+        /**
+         * Handle the Step event for step_1
+         */
+        private function step_1(Step $event): void
         {
             // instanceof \Yiisoft\FormModel\FormModelInterface
             $formModel = new Step1Form();
@@ -124,8 +101,10 @@
             $event->setResponse($response);
         }
 
-        // This step can repeat
-        private function step_2(StepEvent $event): void
+        /**
+         * Handle the Step event for step_2
+         */
+        private function step_2(Step $event): void
         {
             $formModel = new Step2Form();
 
@@ -138,47 +117,7 @@
                     )
             ) {
                 $data = $formModel->getData();
-
-                // Set the data in the normal way
                 $event->setData($data);
-
-                /*
-                 * The form has a submit button called add
-                 * as well as the normal submit button.
-                 * If add was used to submit the form
-                 * and max count has not been reached
-                 * repeat the step
-                 */
-                $wizard = $event->getWizard();
-
-                $currentStep = $wizard->getCurrentStep();
-                $stepData = $wizard->getData($currentStep);
-
-                /*
-                 * The format of step data is application specific
-                 * so the application must check
-                 * how many repetitions there have been.
-                 * If more than one step's data has been saved
-                 * the data is an array of step data.
-                 * If the application saves form data "as is" -
-                 * an array of key=>value pairs,
-                 * if the first key is a string the count is 1,
-                 * if the first key is int the count is
-                 * the size of the array,
-                 * plus 1 for the data from this repetition
-                 */
-                $maxCountReached = $this
-                    ->isMaxCountReached(
-                        $currentStep,
-                        $stepData
-                    )
-                ;
-
-                // Repeat the step if allowed
-                if (!$maxCountReached &amp;&amp; $form->getAdd()) {
-                    $event->setGoto(WIZARD::DIRECTION_REPEAT);
-                }
-
                 return;
             }
 
@@ -195,7 +134,10 @@
             $event->setResponse($response);
         }
 
-        private function step_3(StepEvent $event): void
+        /**
+         * Handle the Step event for step_3
+         */
+        private function step_3(Step $event): void
         {
             $formModel = new Step3Form();
 
@@ -225,5 +167,3 @@
             $event->setResponse($response);
         }
     }
-    </code-block>
-</topic>
